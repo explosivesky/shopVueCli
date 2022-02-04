@@ -27,6 +27,15 @@ export default {
 		costPri: 0, //成本价格
 		weight: 0, //商品重量
 		bulk: 0, //商品体积
+		//媒体设置
+		banners:[{
+			id:1,
+			src:'https://fuss10.elemecdn.com/8/27/f01c15bb73e1ef3793e64e6b7bbccjpeg.jpeg'
+		},
+		{
+			id:2,
+			src:'https://fuss10.elemecdn.com/8/27/f01c15bb73e1ef3793e64e6b7bbccjpeg.jpeg'
+		}],
 		//sku
 		skuList: [{
 				name: '颜色', //规格项
@@ -50,18 +59,18 @@ export default {
 
 			},
 			{
-				name: '颜色', //规格项
+				name: '尺寸', //规格项
 				group: 1,
 				type: 'default', // default 无 ： color 颜色 ： img 图片
 				list: [{
-						name: '红色',
+						name: 'XL',
 						image: '',
 						color: '',
 						isShow: false,
 						default: 'default2'
 					},
 					{
-						name: '黄色',
+						name: 'XXL',
 						image: '',
 						color: '',
 						isShow: false,
@@ -121,6 +130,13 @@ export default {
 				width: "100"
 			},
 		],
+		//商品属性页
+		goodsType:'',//商品类型
+		goodsAttr:{//商品属性
+			type:''
+		},
+		//折扣
+		vipPrice:0,
 	},
 	getters: {
 		//生成表头
@@ -151,6 +167,7 @@ export default {
 			if (skuList.length == 0) return []
 			let arr = $utils.skuComputed(...skuList)
 			return arr.map(v => {
+				//表格 的默认值
 				let obj = {
 					skus: [],
 					image: "", // sku图片
@@ -159,9 +176,10 @@ export default {
 					cprice: 0, // 成本价格
 					stock: 0,//库存
 					volume: 0,//体积
-					weight: 10,//重量
-					code: 'code'//编码
+					weight: 0,//重量
+					code: ''//编码
 				}
+				//生成 sku 的表格的 th 
 				obj.skus=v
 				return obj
 			})
@@ -174,6 +192,8 @@ export default {
 			key,
 			val
 		}) {
+			console.log(key,
+			val)
 			state[key] = val
 		},
 		//增加规格卡片
@@ -210,6 +230,9 @@ export default {
 			val,
 			index
 		}) {
+			console.log(	key,
+			val,
+			index)
 			state.skuList[index][key] = val
 		},
 		//排序规格卡片
@@ -262,6 +285,10 @@ export default {
 			type
 		}) {
 			state.skuList[index].list[subIndex][type] = val
+		},
+		//更改商品属性
+		vModelGoodsAttr(state,{key,val}){
+			state.goodsAttr[key]=val
 		}
 	},
 	actions: {

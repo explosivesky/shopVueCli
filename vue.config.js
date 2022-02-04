@@ -1,11 +1,19 @@
-/*
- * @Author: your name
- * @Date: 2022-01-17 23:37:10
- * @LastEditTime: 2022-01-17 23:37:11
- * @LastEditors: Please set LastEditors
- * @Description: 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
- * @FilePath: \shopProduct\shopvuecli\vue.config.js
- */
 module.exports = {
-	lintOnSave: false
+  lintOnSave: false,
+  devServer: {
+    host: "localhost",
+  	port: 8080, // 端口号
+  	https: false, // https:{type:Boolean}
+  	open: true, //配置自动启动浏览器
+  	proxy: {
+  		'/admin': { //代理api
+  			target: 'http://ceshi3.dishait.cn/admin',//服务器api地址
+  			ws: true,// proxy websockets
+  			changeOrigin: true,//是否跨域
+  			pathRewrite: { //重写路径
+  				'^/admin': ''
+  			}
+  		}
+  	}
+  }
 }

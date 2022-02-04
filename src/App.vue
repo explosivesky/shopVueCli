@@ -31,7 +31,7 @@ export default {
 		openImgDialog(callback, max) {
 			this.$refs.imgDialog.open(callback, max);
 		},
-		openSkuDialog(callback, max) {
+		openSkuDialog(callback) {
 			this.$refs.skuDialog.open(callback);
 		}
 	},

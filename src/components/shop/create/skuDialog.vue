@@ -9,22 +9,24 @@
 	 <el-container style="height: 70vh; position: relative; margin: -30px -20px;">
 	 	<!-- 头部 -->
 	 	<el-header class="bg-light border-bottom flex align-center" style="position: absolute; top: 0; left: 200px; right: 0;">
-			<el-button type="success" @click="totalCheck" size="mini">全部选中</el-button>
+			<el-button type="success" size="mini" @click="cancelChoose(isTotalCheck)">{{isTotalCheck ? '全部取消' : '全部选中'}}</el-button>
 	 	</el-header>
 	 	<el-container>
 	 		<!-- 侧边栏 -->
 	 		<el-aside class="bg-light" width="200px" style="position: absolute; top: 0; left: 0; bottom: 0;">
 	 			<!-- 相册列表组 -->
-	 			<ul class="list-group">
-	 				<li class="list-group-item bg-light hover">1</li>
-	 				<li class="list-group-item bg-light">1</li>
-	 				<li class="list-group-item bg-light">1</li>
-	 				<li class="list-group-item bg-light">1</li>
-	 			</ul>
+				<ul class="list-group">
+					<li class="list-group-item bg-light list-group-item-action" v-for="(item,index) in skuList" :key="index" @click="skuListCheck(index)" :class="currentIndex == index ? 'hover' : ''">{{item.name}}</li>
+				</ul>
 	 		</el-aside>
 	 		<el-container>
 	 			<!-- main -->
-	 			<el-main class="" style="position: absolute; top: 60px; left: 200px; right: 0; bottom: 0;">
+	 			<el-main class="flex" style="position: absolute; top: 60px; left: 200px; right: 0; bottom: 0;">
+					<div class="" v-for="(item,index) in list" :key="item.id" >
+						<span class="px-4 py-2 rounded border mx-3 cursor-pointer" @click="skuItemCheck(item)" :class="item.isCheck ? 'hover' : ''">
+							{{item.name}}
+						</span>
+					</div>
 	 			</el-main>
 	 		</el-container>
 	 	</el-container>
@@ -44,30 +46,60 @@ import imgList from '@/components/image/imgList.vue';
 			  return{
 				  callback:false,
 				  dialogVisible: false,
-				  currentPage4: 4,
-				  // action: '',
-				  searchForm: {
-				  	val: '',
-				  	order: ''
-				  },
-				  dialogForm: {
-				  	input: '',
-				  	num: 0
-				  },
-				  options: [
-				  	{
-				  		value: '顺序排序'
+				  currentIndex: 0,
+				  chooseList: [],
+				  skuList: [{
+				  		name: '颜色', //规格项
+				  		group: 0,
+				  		type: 'default', // default 无 ： color 颜色 ： img 图片
+				  		list: [{
+								id:1,
+				  				name: '红色',
+				  				image: '',
+				  				color: '',
+				  				isShow: false,
+								isCheck:false,
+				  				default: 'default0'
+				  			},
+				  			{
+								id:2,
+				  				name: '黄色',
+				  				image: '',
+				  				color: '',
+				  				isShow: false,
+								isCheck:false,
+				  				default: 'default1'
+				  			}
+				  		]
+				  
 				  	},
 				  	{
-				  		value: '倒序排序'
+				  		name: '尺寸', //规格项
+				  		group: 1,
+				  		type: 'default', // default 无 ： color 颜色 ： img 图片
+				  		list: [{
+								id:3,
+				  				name: 'XL',
+				  				image: '',
+				  				color: '',
+				  				isShow: false,
+								isCheck:false,
+				  				default: 'default2'
+				  			},
+				  			{
+								id:4,
+				  				name: 'XXL',
+				  				image: '',
+				  				color: '',
+				  				isShow: false,
+								isCheck:false,
+				  				default: 'default3'
+				  			}
+				  		]
+				  
 				  	}
 				  ],
-				  picture: [],
-				  currentIndex: 0,
-				  pictureIndex: -1,
-				  srcList: [],
-				  chooseList: [],
-				  max:0,//最多选中图片数量
+				  list:[],
 			  }
 		},
 		methods:{
@@ -75,67 +107,86 @@ import imgList from '@/components/image/imgList.vue';
 			totalCheck(){
 				
 			},
+			//列表选中时
+			skuListCheck(index){
+				this.currentIndex = index
+				this.list=this.skuList[index].list
+				this.cancelChoose(true)
+			},
+			//列表中的每一项选中时
+			skuItemCheck(item){
+				//没选过
+				if(!item.isCheck){
+					this.chooseList.push(item)
+					return item.isCheck=true
+				}
+				//之前选中过 就取消选中 并从 chooseList 删除这一项
+				 let index = this.chooseList.findIndex(v=>v.id === item.id)
+				 //找不到
+				 if(index < 0) return
+				 this.chooseList.splice(index,1)
+				item.isCheck=false
+			},
 			//dialog
-			open(callback,max=1){
+			open(callback){
 					  this.callback=callback
 					this.dialogVisible=true
-					this.max=max
 			},
 			//确定
 			confirm(){
 					//选中图片 url
-					if(typeof this.callback === 'function')this.callback(...this.chooseList)
+					if(typeof this.callback === 'function'){
+						let item = this.skuList[this.currentIndex]
+						this.callback({
+							name:item.name,
+							type:item.type,
+							list:item.list
+						})
+					}
 					//隐藏  
 					this.hide()
 			},
 			hide(){
-					this.cancelChoose()
+					this.cancelChoose(true)
 					this.dialogVisible=false
 					this.callback=false
 			},
-			//打开prompt
-			openPrompt(id) {
-				let index = this.srcList.findIndex(i => i.id === id);
-				this.$prompt('请输入图片信息', '修改图片信息', {
-					showClose: false,
-					closeOnClickModal: false,
-					inputValue: this.srcList[this.srcList.findIndex(i => i.id === id)].name,
-					confirmButtonText: '确定',
-					cancelButtonText: '取消'
-				}).then(({ value }) => {
-					this.srcList[this.srcList.findIndex(i => i.id === id)].name = value;
-					this.$message({
-						type: 'success',
-						message: '修改成功'
-					});
-				});
+			//全部选中
+			cancelChoose(tag) {
+				if(!tag){
+					this.chooseList = this.list.map(i=>{
+						if(!i.ischeck){
+							i.isCheck=true
+						}
+						return i
+					})
+				}else{
+					this.chooseAll()
+				}
+				
 			},
+			//取消选中
+			chooseAll(){
+				this.list.forEach(i => {
+					if (i.isCheck) {
+						i.isCheck = false;
+					}
+				});
+				this.chooseList = [];
+			}
 		},
 		components: {
 			pictureInfoList,
 			imgList,
 		},
-
-  created() {
-  	for (let i = 0; i < 30; i++) {
-  		this.picture.push({
-  			// id: i,
-  			name: '相册 ' + i,
-  			modelIndex: -1,
-  			num: Math.floor(Math.random(0, 1) * 100)
-  		});
-  	}
-  	for (let i = 0; i < 40; i++) {
-  		this.srcList.push({
-  			id: i,
-  			src: 'https://fuss10.elemecdn.com/8/27/f01c15bb73e1ef3793e64e6b7bbccjpeg.jpeg',
-  			name: '图片' + i,
-  			checkTag: 0,
-  			isCheck: false,
-  			checkState: -1
-  		});
-  	}
-  }
+		computed:{
+			isTotalCheck(){
+				return this.list.length === this.chooseList.length ? true : false
+			}
+		},
+		mounted(){
+			this.skuListCheck(0)
+		}
 	}
 </script>
 

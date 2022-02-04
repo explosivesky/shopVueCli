@@ -16,39 +16,51 @@
 					<!-- 左边 -->
 					<template #left>
 						<div style="width: 740px;">
-							<router-link :to="{name:'shop_goods_create'}"><el-button type="success" class="mr-2" size="mini">发布商品</el-button></router-link>
-							<el-button type="warning" class="mr-2" size="mini">恢复商品</el-button>
+							<el-button type="success" class="mr-2" size="mini">导出数据</el-button>
 							<el-button type="danger" class="mr-2" size="mini">批量删除</el-button>
-							<el-button class="mr-2" size="mini">上架</el-button>
-							<el-button class="mr-2" size="mini">下架</el-button>
-							<el-button class="mr-2" size="mini">推荐</el-button>
 						</div>
 					</template>
 					<!-- 右边 -->
 					<template #default></template>
 					<template #form>
 						<!-- form表单 -->
-						<el-form :inline="true" :model="searchForm" class="demo-form-inline px-4 flex justify-between" size="mini">
-							<el-form-item label="商品名称"><el-input v-model="searchForm.shopName" placeholder="商品名称"></el-input></el-form-item>
-							<el-form-item label="商品编号"><el-input v-model="searchForm.shopCode" placeholder="商品编号"></el-input></el-form-item>
-							<el-form-item label="商品类型">
-								<el-select v-model="searchForm.shopTypes" placeholder="请选择商品类型">
-									<el-option :value="s.value" v-for="s in searchForm.shopTypeList" :key="s.value"></el-option>
+						<el-form :inline="true" :model="form" class="demo-form-inline px-4 flex flex-wrap" size="mini">
+							<el-form-item label="订单编号"><el-input v-model="form.code" placeholder="订单编号"></el-input></el-form-item>
+							<el-form-item label="订单状态">
+								<el-select v-model="form.status" placeholder="请选择订单状态">
+									<el-option :label="0" value="状态1"></el-option>
+									<el-option :label="1" value="状态2"></el-option>
 								</el-select>
 							</el-form-item>
-							<el-form-item label="商品分类"><el-input v-model="searchForm.shopCategory" placeholder="商品分类"></el-input></el-form-item>
+							<el-form-item label="下单时间">
+								<el-date-picker
+								      v-model="form.time"
+								      type="daterange"
+									  style="width: 380px;"
+								      range-separator="至"
+								      start-placeholder="开始日期"
+								      end-placeholder="结束日期"
+									  size="mini">
+								    </el-date-picker>
+							</el-form-item>
+							<el-form-item label="收货人"><el-input v-model="form.user" placeholder="收货人"></el-input></el-form-item>
+							<el-form-item label="手机号" class="flex">
+								<div class="flex">
+									<el-input v-model="form.phone" placeholder="手机号"></el-input>
+									<!-- 按钮组 -->
+									<el-button-group class="flex ml-2">
+										<el-button type="info" class="mr-2" size="mini" @click="search">搜索</el-button>
+										<el-button size="mini" @click="clearForm">清空筛选条件</el-button>
+									</el-button-group>
+								</div>
+							</el-form-item>
 						</el-form>
-						<!-- 按钮组 -->
-						<el-button-group>
-							<el-button type="info" class="mr-2" size="mini" @click="search">搜索</el-button>
-							<el-button size="mini" @click="clearForm">清空筛选条件</el-button>
-						</el-button-group>
 					</template>
 				</search-box>
 				<!-- tabel 表格 -->
 				<el-table
 					ref="multipleTable"
-					:data="tableData[t_i].list"
+					:data="tableData"
 					tooltip-effect="dark"
 					height="700"
 					border
@@ -57,32 +69,59 @@
 					@selection-change="handleSelectionChange"
 				>
 					<el-table-column align="center" type="selection" width="55"></el-table-column>
-					<el-table-column label="商品信息" width="385" show-overflow-tooltip>
+					<el-table-column label="商品信息" width="325">
 						<template slot-scope="scope">
+							<div class="flex">
+								<div class="flex-1">
+									<p class="mb-1">订单编号:</p>
+									<strong>212313213</strong>
+								</div>
+								<div class="flex-1">
+									<p class="mb-1">下单时间:</p>
+									<strong>2123-13-213</strong>
+								</div>
+							</div>
 							<div class="media">
 								<img :src="scope.row.cover" class="mr-3" style="width: 70px; height: 80px; " />
 								<div class="media-body">
-									<p class="mb-1">{{ scope.row.title }}</p>
-									<p class="mb-1">分类: {{ scope.row.category }}</p>
-									<p class="mb-1">时间: {{ scope.row.create_time }}</p>
+									<p class="mb-1 text-primary">{{ scope.row.title }}</p>
 								</div>
 							</div>
 						</template>
 					</el-table-column>
-					<el-table-column label="商品类型" align="center" prop="type"></el-table-column>
-					<el-table-column prop="order" align="center" label="商品排序" show-overflow-tooltip></el-table-column>
-					<el-table-column label="商品状态" width="140" align="center" show-overflow-tooltip>
+					<el-table-column label="实付款" align="center" prop="type" width="120px">
 						<template slot-scope="scope">
-							<el-button type="success" size="mini">上架</el-button>
+							<p class="mb-1">￥ 10</p>
+							<small>(含运费: ￥0.00)</small>
 						</template>
 					</el-table-column>
-					<el-table-column prop="stock" label="总库存" align="center" show-overflow-tooltip></el-table-column>
-					<el-table-column prop="pprice" align="center" label="价格(元)" show-overflow-tooltip></el-table-column>
+					<el-table-column prop="order" align="center" label="买家" width="120px">
+						<template slot-scope="scope">
+							<p class="mb-1">用户名</p>
+							<small>(用户id: 11)</small>
+						</template>
+					</el-table-column>
+					<el-table-column label="商品状态" width="140" align="center" show-overflow-tooltip>
+						<p class="badge badge-success">微信支付</p>
+					</el-table-column>
+					<el-table-column prop="stock" label="配送方式" align="center" show-overflow-tooltip>
+						<p>申通快递</p>
+					</el-table-column>
+					<el-table-column prop="pprice" align="center" label="交易状态" show-overflow-tooltip>
+						<div class="">
+							付款状态: <span class="badge badge-success">已付款</span>
+						</div>
+						<div class="">
+							发货状态: <span class="badge badge-secondary">代发货</span>
+						</div>
+						<div class="">
+							收货状态: <span class="badge badge-secondary">待收货</span>
+						</div>
+					</el-table-column>
 					<el-table-column prop="ischeck" align="center" width="140" label="操作" show-overflow-tooltip>
 						<template slot-scope="scope">
 							<el-button-group>
-								<el-button type="primary" plain size="mini">修改</el-button>
-								<el-button type="danger" plain size="mini" @click="deleteItem(scope.$index)">删除</el-button>
+								<el-button type="text" plain size="mini" class="hover px-2">订单详情</el-button>
 							</el-button-group>
 						</template>
 					</el-table-column>
@@ -118,56 +157,42 @@ export default {
 		return {
 			tableIndex: 0,
 			isShow: false,
-			searchForm: {
-				shopName: '',
-				shopCode: '',
-				shopTypes: '',
-				shopTypeList: [
-					{
-						value: '类型一'
-					},
-					{
-						value: '类型二'
-					}
-				],
-				shopCategory: ''
+			form: {
+				code: '',
+				status: '',
+				time: '',
+				user: '',
+				phone: '',
 			},
 			tabTitleList: [
 				{
-					name: '审核中'
+					name: '全部'
 				},
 				{
-					name: '出售中'
+					name: '待付款'
 				},
 				{
-					name: '已下架'
+					name: '待收货'
 				},
 				{
-					name: '库存预警'
+					name: '已发货'
 				},
 				{
-					name: '回收站'
+					name: '已收货'
+				},
+				{
+					name: '已完成'
+				},
+				{
+					name: '已关闭'
+				},
+				{
+					name: '退款中'
 				}
 			],
-			tableData: [],
-			multipleSelection: [],
-			currentPage:0
-		};
-	},
-	created() {
-		this.__getData();
-	},
-	methods: {
-		__getData() {
-			for (let i = 0; i < this.tabTitleList.length; i++) {
-				this.tableData.push({
-					creentPage: 1,
-					list: []
-				});
-				for (let j = 0; j < 11; j++) {
-					this.tableData[i].list.push({
+			tableData: [{
 						id: 1,
-						title: '荣耀 V10全网通 标配版 4GB+64GB 魅丽红' + i + '-' + j,
+						title: '荣耀 V10全网通 标配版 4GB+64GB 魅丽红',
 						cover: 'http://static.yoshop.xany6.com/2018071718294208f086786.jpg',
 						create_time: '2019-07-17 18:34:14',
 						category: '手机',
@@ -179,10 +204,14 @@ export default {
 						pprice: 1000,
 						ischeck: 1
 						// 0未审核，1通过，2不通过
-					});
-				}
-			}
-		},
+					}],
+			multipleSelection: [],
+			currentPage:0
+		};
+	},
+	created() {
+	},
+	methods: {
 		handleClick() {
 			console.log(this.activeName);
 		},

@@ -77,6 +77,7 @@ export default {
 	},
 	watch:{
 		getThsData(newval){
+			//更新本地list 数据
 			this.list=newval
 		}
 	},

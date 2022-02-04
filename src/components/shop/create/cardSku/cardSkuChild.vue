@@ -3,7 +3,7 @@
 		<!-- 删除 -->
 		<span class="btn btn-light el-icon-circle-close p-0 rounded-circle border-0 position-absolute" style="right: -0.5em; top: -0.5em;" @click="delItem({subIndex,index})"></span>
 		<!-- 颜色 -->
-		<el-color-picker v-model="item.color" size="mini" v-if="type == 'color'" class="mr-2"></el-color-picker>
+		<el-color-picker :value="item.color" size="mini" v-if="type == 'color'" class="mr-2" @change="changeChoose"></el-color-picker>
 		<!-- 图片 -->
 		<template v-if="type == 'img'">
 			<div v-if="!item.image" class="el-icon-plus border btn btn-light flex justify-center align-center mr-2" style="width: 30px; height: 30px;" @click="openDialog"></div>
@@ -36,13 +36,10 @@
 				},1)
 			},
 			vModel(val,type){
-				console.log(val,type)
 				this.updateIpt({index:this.index,subIndex:this.subIndex,val,type})
-			}
-		},
-		watch:{
-			item(newval){
-				console.log(newval)
+			},
+			changeChoose(val){
+				this.vModel(val,'color')
 			}
 		}
 	}

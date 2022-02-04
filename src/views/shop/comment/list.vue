@@ -8,33 +8,29 @@
 -->
 <template>
 	<!-- <div class="position-absolute bg-white" style="top: 55px;"> -->
-	<div class="bg-white px-4 position-absolute" style="top: 55px; right: 0; bottom: 0; left: 0;">
-		<!-- tabs标签页 -->
-		<el-tabs v-model="tableIndex" @tab-click="handleClick">
-			<el-tab-pane :label="t.name" v-for="(t, t_i) in tabTitleList" :key="t_i">
-				<search-box placeholder="要搜索的商品名称" @search="search">
+	<div class="bg-white px-2 position-absolute" style="top: 55px; right: 0; bottom: 0; left: 0;">
+				<search-box placeholder="要搜索的商品名称" @search="search" class="pt-2">
 					<!-- 左边 -->
 					<template #left>
 						<div style="width: 740px;">
-							<router-link :to="{name:'shop_goods_create'}"><el-button type="success" class="mr-2" size="mini">发布商品</el-button></router-link>
-							<el-button type="warning" class="mr-2" size="mini">恢复商品</el-button>
 							<el-button type="danger" class="mr-2" size="mini">批量删除</el-button>
-							<el-button class="mr-2" size="mini">上架</el-button>
-							<el-button class="mr-2" size="mini">下架</el-button>
-							<el-button class="mr-2" size="mini">推荐</el-button>
 						</div>
 					</template>
 					<!-- 右边 -->
-					<template #default></template>
+					<template #right></template>
 					<template #form>
 						<!-- form表单 -->
 						<el-form :inline="true" :model="searchForm" class="demo-form-inline px-4 flex justify-between" size="mini">
-							<el-form-item label="商品名称"><el-input v-model="searchForm.shopName" placeholder="商品名称"></el-input></el-form-item>
-							<el-form-item label="商品编号"><el-input v-model="searchForm.shopCode" placeholder="商品编号"></el-input></el-form-item>
-							<el-form-item label="商品类型">
-								<el-select v-model="searchForm.shopTypes" placeholder="请选择商品类型">
-									<el-option :value="s.value" v-for="s in searchForm.shopTypeList" :key="s.value"></el-option>
-								</el-select>
+							<el-form-item label="用户评价"><el-input v-model="searchForm.shopName" placeholder="用户评价"></el-input></el-form-item>
+							<el-form-item label="评价类型"><el-input v-model="searchForm.shopCode" placeholder="评价类型"></el-input></el-form-item>
+							<el-form-item label="发布时间">
+									  <el-date-picker
+									      v-model="date"
+									      type="daterange"
+									      range-separator="至"
+									      start-placeholder="开始日期"
+									      end-placeholder="结束日期">
+									    </el-date-picker>
 							</el-form-item>
 							<el-form-item label="商品分类"><el-input v-model="searchForm.shopCategory" placeholder="商品分类"></el-input></el-form-item>
 						</el-form>
@@ -48,47 +44,68 @@
 				<!-- tabel 表格 -->
 				<el-table
 					ref="multipleTable"
-					:data="tableData[t_i].list"
+					:data="tableData"
 					tooltip-effect="dark"
 					height="700"
 					border
 					style="width: 100%"
-					class="mt-4 pb-1"
+					class="mt-2 pb-1"
 					@selection-change="handleSelectionChange"
 				>
 					<el-table-column align="center" type="selection" width="55"></el-table-column>
-					<el-table-column label="商品信息" width="385" show-overflow-tooltip>
+					<el-table-column align="center" type="expand" width="55">
+						<div class="media px-5">
+						 <img src="http://static.yoshop.xany6.com/2018071718294208f086786.jpg" class="mr-3 img-cover border" style="width: 60px; height: 60px; border-radius: 100%;" />
+						  <div class="media-body">
+						    <div class="flex justify-between">
+						    	<h6 class="mt-0">用户名一 <small>2022-02-02</small></h6>
+								<el-button type="danger" size="mini">删除</el-button>
+						    </div>
+							<p>评论内容</p>
+						    <div class="media mt-3">
+						       <img src="http://static.yoshop.xany6.com/2018071718294208f086786.jpg" class="mr-3 img-cover border" style="width: 60px; height: 60px; border-radius: 100%" />
+						      <div class="media-body">
+								  <div class="flex justify-between">
+								  	<h6 class="mt-0">客服一 <small>2022-02-02</small></h6>
+								  	<el-button type="danger" size="mini">删除</el-button>
+								  </div>
+						        <p>回复内容</p>
+						      </div>
+						    </div>
+						  </div>
+						</div>
+					</el-table-column>
+					<el-table-column label="ID" align="center" prop="id" width="80"></el-table-column>
+					<el-table-column label="商品" show-overflow-tooltip>
 						<template slot-scope="scope">
 							<div class="media">
-								<img :src="scope.row.cover" class="mr-3" style="width: 70px; height: 80px; " />
+								<img :src="scope.row.goods.cover" class="mr-3" style="width: 70px; height: 80px; " />
 								<div class="media-body">
-									<p class="mb-1">{{ scope.row.title }}</p>
-									<p class="mb-1">分类: {{ scope.row.category }}</p>
-									<p class="mb-1">时间: {{ scope.row.create_time }}</p>
+									<p class="mb-1">{{ scope.row.goods.title }}</p>
 								</div>
 							</div>
 						</template>
 					</el-table-column>
-					<el-table-column label="商品类型" align="center" prop="type"></el-table-column>
-					<el-table-column prop="order" align="center" label="商品排序" show-overflow-tooltip></el-table-column>
-					<el-table-column label="商品状态" width="140" align="center" show-overflow-tooltip>
+					<el-table-column align="left" label="评价信息" width="200" show-overflow-tooltip>
 						<template slot-scope="scope">
-							<el-button type="success" size="mini">上架</el-button>
+							<span>用户名 : {{scope.row.username}}</span>
+							<div>
+								评分 :
+							</div>
+							<el-rate
+							  v-model="scope.row.star"
+							  disabled
+							  show-score
+							  text-color="#ff9900"
+							  score-template="{value}">
+							</el-rate>
 						</template>
 					</el-table-column>
-					<el-table-column prop="stock" label="总库存" align="center" show-overflow-tooltip></el-table-column>
-					<el-table-column prop="pprice" align="center" label="价格(元)" show-overflow-tooltip></el-table-column>
-					<el-table-column prop="ischeck" align="center" width="140" label="操作" show-overflow-tooltip>
-						<template slot-scope="scope">
-							<el-button-group>
-								<el-button type="primary" plain size="mini">修改</el-button>
-								<el-button type="danger" plain size="mini" @click="deleteItem(scope.$index)">删除</el-button>
-							</el-button-group>
-						</template>
-					</el-table-column>
+					<el-table-column prop="create_time" label="评价时间" width="180" align="center" show-overflow-tooltip>
+						</el-table-column>
+					<el-table-column prop="isShow" label="是否显示" width="140" align="center" show-overflow-tooltip>
+						</el-table-column>
 				</el-table>
-			</el-tab-pane>
-		</el-tabs>
 		<div class="position-fixed bg-white flex" style="bottom: 0; left: 200px; right: 0; height: 60px; z-index: 9;">
 			<div class="border-right flex align-center justify-center" style="width: 200px;">
 				<el-button-group>
@@ -132,57 +149,24 @@ export default {
 				],
 				shopCategory: ''
 			},
-			tabTitleList: [
-				{
-					name: '审核中'
+			tableData: [{
+				id:0,
+				goods:{
+					cover:'http://static.yoshop.xany6.com/2018071718294208f086786.jpg',
+					title:'商品标题'
 				},
-				{
-					name: '出售中'
-				},
-				{
-					name: '已下架'
-				},
-				{
-					name: '库存预警'
-				},
-				{
-					name: '回收站'
-				}
-			],
-			tableData: [],
+				userName:'用户名',
+				star:5,
+				
+			}],
+			date:'',
 			multipleSelection: [],
 			currentPage:0
 		};
 	},
 	created() {
-		this.__getData();
 	},
 	methods: {
-		__getData() {
-			for (let i = 0; i < this.tabTitleList.length; i++) {
-				this.tableData.push({
-					creentPage: 1,
-					list: []
-				});
-				for (let j = 0; j < 11; j++) {
-					this.tableData[i].list.push({
-						id: 1,
-						title: '荣耀 V10全网通 标配版 4GB+64GB 魅丽红' + i + '-' + j,
-						cover: 'http://static.yoshop.xany6.com/2018071718294208f086786.jpg',
-						create_time: '2019-07-17 18:34:14',
-						category: '手机',
-						type: '普通商品',
-						sale_count: 20,
-						order: 100,
-						status: 1,
-						stock: 200,
-						pprice: 1000,
-						ischeck: 1
-						// 0未审核，1通过，2不通过
-					});
-				}
-			}
-		},
 		handleClick() {
 			console.log(this.activeName);
 		},

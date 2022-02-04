@@ -16,28 +16,72 @@ let routes = [{
 		},
 		component: 'layout/layout',
 		children: [{
-				meta: {
-					title: '后台首页'
-				},
-				component: 'index/index'
+				meta:{title:'后台首页'},
+				component:'index/index'
 			},
 			{
-				meta: {
-					title: '商品列表'
-				},
-				component: 'shop/goods/list'
+				meta:{title:'商品列表'},
+				component:'shop/goods/list'
 			},
 			{
-				meta: {
-					title: '相册管理'
-				},
-				component: 'imageManage/index'
+				meta:{title:'创建商品'},
+				component:'shop/goods/create'
 			},
 			{
-				meta: {
-					title: '创建商品'
-				},
-				component: 'shop/goods/create'
+				meta:{title:'相册管理'},
+				component:'image/index'
+			},
+			{
+				meta:{title:'分类管理'},
+				component:'shop/category/list'
+			},
+			{
+				meta:{title:'商品规格管理'},
+				component:'shop/sku/list'
+			},
+			{
+				meta:{title:'商品类型管理'},
+				component:'shop/type/list'
+			},
+			{
+				meta:{title:'商品评论管理'},
+				component:'shop/comment/list'
+			},
+			{
+				meta:{title:'发票管理'},
+				component:'order/invoice/list'
+			},
+			{
+				meta:{title:'售后服务'},
+				component:'order/after-sale/list'
+			},
+			{
+				meta:{title:'订单列表'},
+				component:'order/order/list'
+			},
+			{
+				meta:{title:'会员列表'},
+				component:'user/user-list/list'
+			},
+			{
+				meta:{title:'会员等级'},
+				component:'user/user-level/list'
+			},
+			{
+				meta:{title:'基础设置'},
+				component:'set/base/index'
+			},
+			{
+				meta:{title:'物流设置'},
+				component:'set/express/index'
+			},
+			{
+				meta:{title:'管理员管理'},
+				component:'set/manager/index'
+			},
+			{
+				meta:{title:'交易设置'},
+				component:'set/payment/index'
 			}
 		]
 	},
@@ -46,6 +90,10 @@ let routes = [{
 			title: '登录页面'
 		},
 		component: 'login/index'
+	},
+	{
+		meta:{title:'404错误'},
+		component:'error/404'
 	},
 	{
 		path: '*',
@@ -72,6 +120,7 @@ function createRoutes(arr) {
 		arr[i].name = arr[i].name || path.replace(/\//g, '_')
 		let component = import(`@/views/${arr[i].component}`)
 		arr[i].component = () => component
+		//递归
 		if (arr[i].children && arr[i].children.length > 0) {
 			createRoutes(arr[i].children)
 		}
@@ -82,7 +131,7 @@ function clearIndex(str) {
 	let index = str.lastIndexOf('/')
 	//截取 最后一个 '/' 后面的 字符串
 	let isIndex = str.substring(index + 1, str.length)
-	//判断是否为 index ，如果是截取 '/' 前面的字符串 并返回
+	//判断是否为 index 因为 index 会自动找到，如果是截取 '/' 前面的字符串 并返回 
 	if (isIndex === 'index') {
 		return str.substring(index, -1)
 	}
