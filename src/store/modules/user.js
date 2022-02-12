@@ -1,7 +1,7 @@
 export default {
 	state:{
 		user:JSON.parse(window.sessionStorage.getItem('user'))||{},
-		token:false
+		token:window.sessionStorage.getItem('token')||false,
 	},
 	mutations:{
 		//登录

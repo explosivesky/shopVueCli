@@ -14,8 +14,8 @@ const router = new vueRouter({
 	routes
 })
 router.beforeEach((to, from, next) => {
-	console.log(to)
 	let token = window.sessionStorage.getItem('token')
+	let user = JSON.parse(window.sessionStorage.getItem('user'))
 	//已登录
 	if (token) {
 		//防止重复登录
@@ -27,6 +27,10 @@ router.beforeEach((to, from, next) => {
 		}
 		//防止 404 页面死循环
 		if (to.name !== 'error_404') {
+			//超级管理员跳过
+			if(user.super===1){
+				return next()
+			}
 			//防止低权限角色访问 高权限角色的路由
 			let rules = JSON.parse(window.sessionStorage.getItem('rules'))
 			rules = rules ? rules : []

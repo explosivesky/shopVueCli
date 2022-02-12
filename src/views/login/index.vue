@@ -29,7 +29,7 @@
 </template>
 
 <script>
-import {mapGetters} from 'vuex'
+import { mapGetters } from 'vuex';
 export default {
 	data() {
 		return {
@@ -41,39 +41,35 @@ export default {
 				username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
 				password: [{ required: true, message: '请输入用户密码', trigger: 'blur' }]
 			},
-			loading:false
+			loading: false
 		};
 	},
 	methods: {
+		//登录
 		onSubmit() {
-			this.$refs.form.validate(async valid => {
+			this.$refs.form.validate(valid => {
 				if (!valid) return;
-				let res
-				try{
-					this.loading=true
-					 res= await new this.request(this.url.m().login,this.form,{loading:false,token:false}).modepost()
-				}catch(e){
-					this.loading=false
-					return
-				}
-				// 存储到vuex
-				// 存储到本地存储
-				res=res.data.data
-				//存储权限规则
-				if(res.role&&res.role.rules){
-					window.sessionStorage.setItem('rules',JSON.stringify(res.role.rules))
-				}
-				this.$store.commit('login',res)
-				//生成后台数据结构
-				this.$store.commit('getMenu',res.tree)
-				
-				this.loading=false
-				//获取数据中对应的第一个页面是什么
-				this.$router.push({ name: this.defaultRoute });
+				this.loading = true;
+				new this.request(this.url.m().login, this.form, { loading: false, token: false }).modepost().then(res => {
+					// 存储到vuex
+					// 存储到本地存储
+					res = res.data.data;
+					//存储权限规则
+					if (res.role && res.role.rules) {
+						window.sessionStorage.setItem('rules', JSON.stringify(res.role.rules));
+					}
+					this.$store.commit('login', res);
+					//生成后台数据结构
+					this.$store.commit('getMenu', res.tree);
+
+					this.loading = false;
+					//获取数据中对应的第一个页面是什么
+					this.$router.push({ name: this.defaultRoute });
+				});
 			});
 		}
 	},
-	computed:{
+	computed: {
 		...mapGetters(['defaultRoute'])
 	}
 };

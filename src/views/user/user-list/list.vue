@@ -17,19 +17,22 @@
 			<!-- 右边 -->
 			<template #right></template>
 			<template #form>
-				<!-- form表单 -->
-				<el-form :inline="true" :model="searchForm" class="demo-form-inline flex justify-start" size="mini">
-					<el-form-item label="搜索内容"><el-input v-model="searchForm.shopName" placeholder="手机号/邮箱/会员名称"></el-input></el-form-item>
-					<el-form-item label="会员等级"><el-input v-model="searchForm.shopCode" type="number"></el-input></el-form-item>
-					<el-form-item label="发布时间">
-						<el-date-picker v-model="date" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期"></el-date-picker>
-					</el-form-item>
-				</el-form>
-				<!-- 按钮组 -->
-				<el-button-group>
-					<el-button type="info" class="mr-2" size="mini" @click="search">搜索</el-button>
-					<el-button size="mini" @click="clearForm">清空筛选条件</el-button>
-				</el-button-group>
+				<div class="flex">
+					<!-- form表单 -->
+					<el-form :inline="true" :model="searchForm" class="demo-form-inline flex justify-start" size="mini">
+						<el-form-item label="搜索内容"><el-input v-model="searchForm.keyword" placeholder="手机号/邮箱/会员名称"></el-input></el-form-item>
+						<el-form-item label="会员等级">
+							<el-select v-model="searchForm.user_level_id" placeholder="请选择活动区域">
+								<el-option :label="item.name" :value="item.id" v-for="(item,index) in user_level" :key="index"></el-option>
+							</el-select>
+						</el-input></el-form-item>
+					</el-form>
+					<!-- 按钮组 -->
+					<el-button-group class="ml-auto">
+						<el-button type="info" class="mr-2" size="mini" @click="search">搜索</el-button>
+						<el-button size="mini" @click="clearForm">清空筛选条件</el-button>
+					</el-button-group>
+				</div>
 			</template>
 		</search-box>
 		<!-- tabel 表格 -->
@@ -50,7 +53,11 @@
 					</div>
 				</template>
 			</el-table-column>
-			<el-table-column prop="level.name" align="center" label="会员等级" width="180"></el-table-column>
+			<el-table-column align="center" label="会员等级" width="180">
+				<template slot-scope="scope">
+					{{scope.row.user_level.name}}
+				</template>
+			</el-table-column>
 			<el-table-column align="center" label="注册/登录">
 				<template slot-scope="scope">
 					<div class="">注册时间 : {{ scope.row.create_time }}</div>
@@ -59,7 +66,7 @@
 			</el-table-column>
 			<el-table-column align="center" label="状态" width="80">
 				<template slot-scope="scope">
-					<el-switch v-model="scope.row.status"></el-switch>
+					<el-button :type="scope.row.status ? 'warning' : 'success'" size="mini" @click="isBan(scope.row)">{{ scope.row.status ? '禁用' : '启用' }}</el-button>
 				</template>
 			</el-table-column>
 			<el-table-column align="center" label="操作">
@@ -67,27 +74,21 @@
 					<el-button-group>
 						<el-button type="text" class="text-primary mr-2" @click="openDialog(scope)">修改</el-button>
 						<el-button type="text" class="text-primary mr-2">重置密码</el-button>
-						<el-button type="text" class="text-primary">删除</el-button>
+						<el-button type="text" class="text-primary" @click="deleteItem(scope)">删除</el-button>
 					</el-button-group>
 				</template>
 			</el-table-column>
 		</el-table>
 		<div class="position-fixed bg-white flex" style="bottom: 0; left: 200px; right: 0; height: 60px; z-index: 9;">
-			<div class="border-right flex align-center justify-center" style="width: 200px;">
-				<el-button-group>
-					<el-button class="mr-2" size="mini">上一页</el-button>
-					<el-button size="mini">下一页</el-button>
-				</el-button-group>
-			</div>
 			<div class="pl-2 flex align-center">
 				<el-pagination
 					@size-change="handleSizeChange"
 					@current-change="handleCurrentChange"
-					:current-page="currentPage"
-					:page-sizes="[100, 200, 300, 400]"
-					:page-size="100"
+					:current-page="page.currentPage"
+					:page-sizes="page.pageSizes"
+					:page-size="page.pageSize"
 					layout="total, sizes, prev, pager, next, jumper"
-					:total="400"
+					:total="page.total"
 				></el-pagination>
 			</div>
 		</div>
@@ -96,7 +97,7 @@
 			<el-form ref="form" :model="form" label-width="80px">
 				<el-form-item label="用户名"><el-input v-model="form.username" type="text" placeholder="用户名" class="w-50"></el-input></el-form-item>
 				<el-form-item label="密码"><el-input v-model="form.password" type="password" placeholder="密码" class="w-50"></el-input></el-form-item>
-				<el-form-item label="昵称"><el-input v-model="form.nikename" type="text" placeholder="名称" class="w-50"></el-input></el-form-item>
+				<el-form-item label="昵称"><el-input v-model="form.nickname" type="text" placeholder="名称" class="w-50"></el-input></el-form-item>
 				<el-form-item label="头像">
 					<template slot-scope="scope">
 						<div class="flex align-center justify-center border rounded p-0 cursor-pointer" style="height: 50px; width: 50px;" @click="openImgDialog">
@@ -113,20 +114,12 @@
 					</template>
 				</el-form-item>
 				<el-form-item label="会员等级">
-					<el-select v-model="form.level_id" placeholder="会员等级">
-						<el-option label="普通会员" :value="1"></el-option>
-						<el-option label="黄金会员" :value="2"></el-option>
+					<el-select v-model="form.user_level_id" placeholder="请选择活动区域">
+						<el-option :label="item.name" :value="item.id" v-for="(item,index) in user_level" :key="index"></el-option>
 					</el-select>
 				</el-form-item>
 				<el-form-item label="手机"><el-input v-model="form.phone" type="phone" placeholder="手机" class="w-50"></el-input></el-form-item>
 				<el-form-item label="邮箱"><el-input v-model="form.email" type="email" placeholder="邮箱" class="w-50"></el-input></el-form-item>
-				<el-form-item label="性别">
-					<el-radio-group v-model="form.sex">
-						<el-radio :label="0" border>保密</el-radio>
-						<el-radio :label="1" border>男性</el-radio>
-						<el-radio :label="2" border>女性</el-radio>
-					</el-radio-group>
-				</el-form-item>
 			</el-form>
 			<div slot="footer" class="dialog-footer">
 				<el-button @click="createModel = false">取 消</el-button>
@@ -138,99 +131,55 @@
 
 <script>
 import searchBox from '@/components/searchBox/searchBox.vue';
+import mixin from '@/common/mixins'
 export default {
+	inject:['app','layout'],
+	mixins:[mixin],
 	data() {
 		return {
 			tableIndex: 0,
 			isShow: false,
 			searchForm: {
-				shopName: '',
-				shopCode: '',
-				shopTypes: '',
-				shopTypeList: [
-					{
-						value: '类型一'
-					},
-					{
-						value: '类型二'
-					}
-				],
-				shopCategory: ''
+				keyword: '',
+				user_level_id: '',
 			},
 			tableData: [
-				{
-					id: 10,
-					avatar: 'http://static.yoshop.xany6.com/2018071718294208f086786.jpg',
-					username: '二傻子',
-					level_id: 1,
-					level: {
-						id: 1,
-						name: '普通会员'
-					},
-					create_time: '2121-23-22 15:22:22',
-					update_time: '2121-23-22 15:22:22',
-					status: true
-				}
 			],
 			form: {
-				username: '',
-				password: '',
-				nickname: '',
-				avatar: '',
-				level_id: 1,
-				phone: '',
-				email: '',
-				sex: 0,
-				status: true
 			},
 			editIndex: -1,
-			date: '',
 			multipleSelection: [],
 			currentPage: 0,
-			createModel: false
+			createModel: false,
+			dynamicUrl:'user',
+			user_level:[]
 		};
 	},
-	created() {},
-	inject: ['app'],
 	methods: {
+		//覆盖 mixins 的getMixinList
+		getMixinList(data) {
+			this.tableData=data.list
+			this.user_level=data.user_level
+		},
+		//覆盖 mixins 的init url
+		editUrlVal() {
+			//组件中没写这个方法 则不会覆盖
+			return this.url.m(this.page.currentPage, '?limit=' + this.page.pageSize+'&keyword='+this.searchForm.keyword+'&user_level_id='+this.searchForm.user_level_id)[this.dynamicUrl].init
+		},
 		//图像选择dialog
 		openImgDialog() {
 			this.app.openImgDialog(res => {
-				console.log(res);
 				this.form.avatar = res.src;
 			});
 		},
 		//确定
 		ensure() {
-			let msg = '';
-			//创建
-			if (this.editIndex == -1) {
-				this.tableData.unshift({
-					id: 10,
-					avatar: this.form.avatar,
-					username: this.form.username,
-					level_id: this.form.level_id,
-					level: {
-						id: 1,
-						name:this.form.level_id == 1 ? '普通会员' : '黄金会员'
-					},
-					create_time: '2121-23-22 15:22:22',
-					update_time: '2121-23-22 15:22:22',
-					status: this.form.status
-				});
-				msg = '添加';
-			} else {
-				//修改
-				let item = this.tableData[this.editIndex];
-				item.avatar = this.form.avatar;
-				item.username = this.form.username;
-				item.level_id = this.form.level_id;
-				item.level.name= this.form.level_id == 1 ? '普通会员' : '黄金会员'
-				item.status = this.form.status;
-				this.editIndex = -1;
-				msg = '修改';
+			//修改
+			let id = 0
+			if (this.editIndex !== -1) {
+				id=this.tableData[this.editIndex].id
 			}
-			this.$message.success(msg + '成功');
+			this.addOrEdit(this.form,id)//mixins
 			this.createModel = false;
 		},
 		//打开 dialog
@@ -242,73 +191,55 @@ export default {
 					password: '',
 					nickname: '',
 					avatar: '',
-					level_id: 1,
+					user_level_id: '',
 					phone: '',
 					email: '',
-					sex: 0,
 					status: true
 				};
 			} else {
 				//修改
 				this.form = {
+					id:e.row.id,
 					username: e.row.username,
 					password: '',
-					nickname: '',
+					nickname: e.row.nickname,
 					avatar: e.row.avatar,
-					level_id: e.row.level_id,
-					phone: '',
-					email: '',
-					sex: 0,
+					user_level_id: e.row.user_level_id,
+					phone: parseInt(e.row.phone),
+					email: e.row.email,
 					status: e.row.status
 				};
 				this.editIndex = e.$index;
 			}
 			this.createModel = true;
 		},
-		handleClick() {
-			console.log(this.activeName);
-		},
-		superSearch(boolean) {
-			this.isShow = boolean;
-		},
 		//清空筛选条件
 		clearForm() {
 			this.isShow = false;
 			this.searchForm = {
-				shopName: '',
-				shopCode: '',
-				shopTypes: '',
-				shopTypeList: [
-					{
-						value: '类型一'
-					},
-					{
-						value: '类型二'
-					}
-				],
-				shopCategory: ''
+				keyword:'',
+				user_level_id: ''
 			};
 		},
 		//搜索 || 高级搜索
 		search(e) {
 			//普通搜索
-			if (typeof e === String) {
+			if (typeof e === 'string') {
+				this.searchForm.keyword=e
+				this.__init()
+				return
 			}
 			//高级搜索
-		},
-		// 当选择项发生变化时会触发该事件
-		handleSelectionChange(val) {
-			this.multipleSelection = val;
-			console.log(val);
+			this.__init()
 		},
 		//删除表单图片
 		deleteImg() {
 			this.form.avatar = '';
 		},
-		//当前项改变时触发
-		handleCurrentChange() {},
-		//size 发生变化时触发
-		handleSizeChange() {}
+		//删除会员列表项
+		deleteItem(scope){
+			this.deleteSku('single',scope.row.id)
+		}
 	},
 	components: {
 		searchBox

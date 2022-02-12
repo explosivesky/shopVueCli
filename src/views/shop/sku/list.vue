@@ -14,7 +14,7 @@
 			<template #left>
 				<div style="width: 740px;">
 					<el-button type="success" class="mr-2" size="mini" @click="openRulesDialog(false)">添加规格</el-button>
-					<el-button type="danger" class="mr-2" size="mini" @click="deleteAll">批量删除</el-button>
+					<el-button type="danger" class="mr-2" size="mini" @click="deleteSku('all')">批量删除</el-button>
 				</div>
 			</template>
 		</search-box>
@@ -22,7 +22,7 @@
 		<el-table ref="multipleTable" :data="tableData" tooltip-effect="dark" height="700" border style="width: 100%" class="mt-2 pb-1" @selection-change="handleSelectionChange">
 			<el-table-column align="center" type="selection" width="55"></el-table-column>
 			<el-table-column label="规格名称" prop="name" width="385" show-overflow-tooltip></el-table-column>
-			<el-table-column label="规格值" align="center" prop="value"></el-table-column>
+			<el-table-column label="规格值" align="center" prop="default"></el-table-column>
 			<el-table-column prop="order" align="center" label="排序" show-overflow-tooltip></el-table-column>
 			<el-table-column label="状态" width="140" align="center" show-overflow-tooltip>
 				<template slot-scope="scope">
@@ -33,7 +33,7 @@
 				<template slot-scope="scope">
 					<el-button-group>
 						<el-button type="primary" plain size="mini" @click="openRulesDialog(scope)">修改</el-button>
-						<el-button type="danger" plain size="mini" @click="deleteItem(scope.$index)">删除</el-button>
+						<el-button type="danger" plain size="mini" @click="deleteSku('single', scope.row.id)">删除</el-button>
 					</el-button-group>
 				</template>
 			</el-table-column>
@@ -49,18 +49,18 @@
 				<el-pagination
 					@size-change="handleSizeChange"
 					@current-change="handleCurrentChange"
-					:current-page="currentPage"
-					:page-sizes="[100, 200, 300, 400]"
-					:page-size="100"
+					:current-page="page.currentPage"
+					:page-sizes="page.pageSizes"
+					:page-size="page.pageSize"
 					layout="total, sizes, prev, pager, next, jumper"
-					:total="400"
+					:total="page.total"
 				></el-pagination>
 			</div>
 		</div>
 		<el-dialog title="添加规格" :visible.sync="createModel" :modal="false" width="60%">
 			<el-form ref="form" :model="form" label-width="80px" :rules="rules">
 				<el-form-item label="规格名称" prop="name"><el-input v-model="form.name" placeholder="规格名称" style="width: 150px;"></el-input></el-form-item>
-				<el-form-item label="排序"><el-input-number v-model="form.order" @change="handleChange" :min="1" :max="50"></el-input-number></el-form-item>
+				<el-form-item label="排序"><el-input-number v-model="form.order" :min="1" :max="2147483647"></el-input-number></el-form-item>
 				<el-form-item label="状态">
 					<el-radio-group v-model="form.status">
 						<el-radio :label="0" border>启用</el-radio>
@@ -74,8 +74,8 @@
 						<el-radio :label="2" border>图片</el-radio>
 					</el-radio-group>
 				</el-form-item>
-				<el-form-item label="规格值" prop="value">
-					<el-input v-model="form.value" type="textarea" size="mini" placeholder="一行为一个规格项,多个规格项用换行输入"></el-input>
+				<el-form-item label="规格值" prop="default">
+					<el-input v-model="form.default" type="textarea" size="mini" placeholder="一行为一个规格项,多个规格项用换行输入"></el-input>
 				</el-form-item>
 			</el-form>
 			<div slot="footer" class="dialog-footer">
@@ -88,152 +88,70 @@
 
 <script>
 import searchBox from '@/components/searchBox/searchBox.vue';
+import mixin from '@/common/mixins';
 export default {
+	inject: ['layout'],
+	mixins: [mixin],
 	data() {
 		return {
 			isShow: false,
 			form: {
+				id: 0,
 				name: '',
 				order: 0,
 				status: 0,
 				type: 0,
-				value: ''
+				default: ''
 			},
-			tableData: [
-				{
-					id: 0,
-					name: '颜色',
-					value: '棕色,蓝色',
-					order: 50,
-					status: 0,
-					type: 0
-				},
-				{
-					id: 1,
-					name: '颜色',
-					value: '棕色,蓝色',
-					order: 50,
-					status: 0,
-					type: 0
-				}
-			],
-			multipleSelection: [],
-			currentPage: 0,
+			tableData: [],
 			createModel: false,
 			rules: {
 				name: [{ required: true, message: '规格名称不能为空', trigger: 'blur' }],
-				value: [{ required: true, message: '规格值不能为空', trigger: 'blur' }]
+				default: [{ required: true, message: '规格值不能为空', trigger: 'blur' }]
 			},
-			currentIndex: -1
+			dynamicUrl: 'sku'
 		};
 	},
-	created() {},
 	methods: {
-		//是否禁用
-		isBan(item) {
-			this.$message({ type: 'success', message: item.status ? '启用' : '禁用' });
-			item.status = item.status == 1 ? 0 : 1;
+		getMixinList(e) {
+			this.tableData = e.list;
 		},
 		//打开规格dialog
 		openRulesDialog(e) {
 			//新建
 			if (e == false) {
+				this.currentIndex = -1;
 				this.form = {
-					name: '',
-					order: 0,
+					name: '加妹妹微信18569632331',
+					order: 2147483647,
 					status: 0,
 					type: 0,
-					value: ''
+					default: '上门服务'
 				};
 			} else {
 				//修改页面的 初始值
-				this.form={
+				this.form = {
 					...e.row,
-					value:e.row.value.replace(/,/g, '\n')
-				}
-				// let item = this.form;
-				// item.name = e.row.name;
-				// item.order = e.row.order;
-				// item.status = e.row.status;
-				// item.type = e.row.type;
-				// item.value = e.row.value.replace(/,/g, '\n');
+					default: e.row.default.replace(/,/g, '\n')
+				};
 				//根据currentindex 判断是 添加表格 | 修改表格
 				this.currentIndex = e.$index;
 			}
 			this.createModel = true;
 		},
-		//关闭规格dialog
-		closeRulesDialog() {
-			this.createModel = false;
-		},
 		//dialog确定
 		ruleFn(e) {
 			this.$refs.form.validate(res => {
 				if (!res) return;
-				let msg = '添加';
-				if (this.currentIndex == -1) {
-					//添加表格
-					this.form.value = this.form.value.replace(/\n/g, ',');
-					this.tableData.unshift(this.form);
-					this.form = {
-						id: 5,
-						name: '',
-						order: 0,
-						status: 0,
-						type: 0,
-						value: ''
-					};
-				} else {
+				let id = 0;
+				this.form.default = this.form.default.replace(/\n/g, ',');
+				if (this.currentIndex !== -1) {
 					//修改表格
-					//！！！ 一定要让这个 item 引用 this.batleData 的内存地址，否侧不生效
-					let item = this.tableData[this.currentIndex];
-					item.name = this.form.name;
-					item.order = this.form.order;
-					item.status = this.form.status;
-					item.type = this.form.type;
-					item.value = this.form.value.replace(/\n/g, ',');
-					msg = '修改';
-					this.currentIndex = -1;
+					id = this.tableData[this.currentIndex].id;
 				}
-
-				this.closeRulesDialog();
-				this.$message.success(msg + '成功');
+				this.addOrEdit(this.form,id);
 			});
-		},
-		//批量删除
-		deleteAll() {
-			this.$confirm('此操作将永久删除该文件, 是否继续?', '提示', {
-				confirmButtonText: '确定',
-				cancelButtonText: '取消',
-				type: 'warning'
-			}).then(() => {
-				let index;
-				this.multipleSelection.forEach(i => {
-					index = this.tableData.findIndex(v => v.id == i.id);
-					if (index !== -1) this.tableData.splice(index, 1);
-				});
-				this.$message.success('删除成功!');
-			});
-		},
-		handleClick() {
-			console.log(this.activeName);
-		},
-		superSearch(boolean) {
-			this.isShow = boolean;
-		},
-		// 当选择项发生变化时会触发该事件
-		handleSelectionChange(val) {
-			this.multipleSelection = val;
-		},
-		//删除一项列表
-		deleteItem(index) {
-			this.tableData.splice(index, 1);
-		},
-		//当前项改变时触发
-		handleCurrentChange() {},
-		//size 发生变化时触发
-		handleSizeChange() {},
-		handleChange() {}
+		}
 	},
 	components: {
 		searchBox

@@ -10,7 +10,7 @@
 						<el-input class="mr-2" v-model="shopName" :placeholder="placeholder" size="mini" style="width: 200px;"></el-input>
 						<el-button-group>
 							<el-button type="info" class="mr-2" size="mini" @click="$emit('search', shopName)">搜索</el-button>
-							<el-button plain="" size="mini" @click="superSearchFn(true)">高级搜索</el-button>
+							<el-button plain="" size="mini" @click="superSearchFn(true)" v-if="showSuperSearch">高级搜索</el-button>
 						</el-button-group>
 					</div>
 				</slot>
@@ -37,6 +37,10 @@ export default {
 		noShow: {
 			type: Boolean,
 			default: true
+		},
+		showSuperSearch:{
+			type:Boolean,
+			default:true
 		}
 	},
 	data() {

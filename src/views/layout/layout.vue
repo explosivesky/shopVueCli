@@ -46,7 +46,7 @@
 					</el-menu>
 				</el-aside>
 				<!-- 内容区域 -->
-				<el-main class="bg-light" style="position: relative;">
+				<el-main class="bg-light" style="position: relative;" v-loading="loading" element-loading-text="拼命加载中"  element-loading-spinner="el-icon-loading">
 					<!-- 面包屑 -->
 					<div class="border-bottom bg-white" style="padding:20px; margin:-20px; border-color:#d3dce6; margin-top: -20px;" v-if="breadList.length > 0">
 						<el-breadcrumb separator-class="el-icon-arrow-right">
@@ -71,9 +71,18 @@ export default {
 			circleUrl: 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png',
 			//面包屑的数据
 			breadList: [],
+			loading:false
 		};
 	},
+	provide(){
+		return{
+			layout:this
+		}
+	},
 	methods: {
+		isLoading(flag){
+			this.loading=flag
+		},
 		//navBar改变时
 		navBarSelect(key) {
 			//设置
@@ -90,30 +99,36 @@ export default {
 			this.navBarItemList.activeIndex = key;
 			if (!this.navBarItemList.list[key].itemList) return;
 			//如果 isCreate 为创建商品路由，则直接跳到创建商品页面
-			let isCreate = localStorage.getItem('isCreate')
-			if(isCreate!='false'&&key==1){
-				name = isCreate
-			}else{
-				//根据navbar 当前的 activeIndex 获取数据的 router_name
-				//访问 sliderActive 计算属性触发 get 获取当前触发的 slider 中的 subActiveIndex
-				let item = this.navBarItemList.list[key].itemList
-				if(item.length===0)return
-				name=item[this.sliderActive].router_name;
-			}
+			// let isCreate = localStorage.getItem('isCreate')
+			// if(isCreate!='false'&&key==1){
+			// 	name = isCreate
+			// }else{
+			// 	//根据navbar 当前的 activeIndex 获取数据的 router_name
+			// 	//访问 sliderActive 计算属性触发 get 获取当前触发的 slider 中的 subActiveIndex
+			// 	let item = this.navBarItemList.list[key].itemList
+			// 	if(item.length===0)return
+			// 	name=item[this.sliderActive].router_name;
+			// }
+			//根据navbar 当前的 activeIndex 获取数据的 router_name
+			//访问 sliderActive 计算属性触发 get 获取当前触发的 slider 中的 subActiveIndex
+			let item = this.navBarItemList.list[key].itemList
+			if(item.length===0)return
+			name=item[this.sliderActive].router_name;
 		this.$router.push({ name }).catch(e => e);
 		},
 		//sliderBar 改变时
 		sliderChanged(key) {
 			let name
-			let isCreate = localStorage.getItem('isCreate')
+			// let isCreate = localStorage.getItem('isCreate')
 			//只要一调用 计算属性 内部的所有相关数据 都会更新
 			this.sliderActive = key;
 			//只有在点击商品列表赋值
-			if(isCreate!='false'&&key==0&&this.navBarItemList.activeIndex == 1){
-				name=isCreate
-			}else{
-			   name = this.navBarItemList.list[this.navBarItemList.activeIndex].itemList[key].router_name;
-			}
+			// if(isCreate!='false'&&key==0&&this.navBarItemList.activeIndex == 1){
+			// 	name=isCreate
+			// }else{
+			//    name = this.navBarItemList.list[this.navBarItemList.activeIndex].itemList[key].router_name;
+			// }
+			name = this.navBarItemList.list[this.navBarItemList.activeIndex].itemList[key].router_name;
 			//根据 key 获取对应的 router_name 属性用来跳转对应路由
 			this.$router.push({ name }).catch(e => e);
 		},
@@ -144,7 +159,7 @@ export default {
 		//用户退出
 		async out(){
 			try{
-				let res= await new this.request(this.url.m().logout).modepost()
+				let res= await new this.request(this.url.m().logout,{},{token:true,loading:true}).modepost()
 			}catch(e){
 				return
 			}
@@ -161,8 +176,6 @@ export default {
 		}),
 		sliderActive: {
 			get() {
-				console.log(this.navBarItemList)
-				console.log(this.navBarItemList.list[this.navBarItemList.activeIndex])
 				//访问时获取navBar 对应的 数组列表数据的 subActiveIndex
 				return this.navBarItemList.list.length ===0 ?  '0' : this.navBarItemList.list[this.navBarItemList.activeIndex].subActiveIndex;
 			},
@@ -190,12 +203,12 @@ export default {
 	watch: {
 		$route(to, from) {
 			//控制是否进入 create 页面
-			if(from.name=='shop_goods_create'){
-				localStorage.setItem('isCreate','shop_goods_create')
-			}
-			if(to.name=='shop_goods_list'){
-				localStorage.setItem('isCreate',false)
-			}
+			// if(from.name=='shop_goods_create'){
+			// 	localStorage.setItem('isCreate','shop_goods_create')
+			// }
+			// if(to.name=='shop_goods_list'){
+			// 	localStorage.setItem('isCreate',false)
+			// }
 			//更新面包屑
 			this.dynamicBread();
 			localStorage.setItem('activeRoute', JSON.stringify({ top: this.navBarItemList.activeIndex, left: this.sliderActive }));

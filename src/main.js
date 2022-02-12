@@ -33,7 +33,7 @@ function showLoading() {
 		loading = Loading.service({
 			lock: true,
 			text: '拼命加载中...',
-			background: 'rgba(0, 0, 0, 0.7)'
+			background: 'rgba(255, 255, 255, 0.7)'
 		})
 		num++
 	}

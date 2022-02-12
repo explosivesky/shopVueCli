@@ -21,7 +21,7 @@
 		</thead>
 		<tbody>
 			<tr v-for="(item, g_i) in list" :key="g_i">
-				<th scope="row" class="text-center" v-for="(s, s_i) in item.skus" :key="s_i">{{ s.name }}</th>
+				<th scope="row" class="text-center" v-for="(s, s_i) in item.skus" :key="s_i">{{ s.value }}</th>
 				<td class="text-center" style="vertical-align: middle;">
 					<span v-if="!item.image" class="border btn btn-light" @click="openDialog(item)">
 						<i class="el-icon-plus"></i>

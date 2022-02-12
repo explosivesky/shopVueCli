@@ -14,7 +14,7 @@
 			<template #left>
 				<div style="width: 740px;">
 					<el-button type="success" class="mr-2" size="mini" @click="openRulesDialog(false)">添加类型</el-button>
-					<el-button type="danger" class="mr-2" size="mini" @click="deleteAll">批量删除</el-button>
+					<el-button type="danger" class="mr-2" size="mini" @click="deleteSku('all')">批量删除</el-button>
 				</div>
 			</template>
 		</search-box>
@@ -22,9 +22,9 @@
 		<el-table ref="multipleTable" :data="tableData" tooltip-effect="dark" height="700" border style="width: 100%" class="mt-2 pb-1" @selection-change="handleSelectionChange">
 			<el-table-column align="center" type="selection" width="55"></el-table-column>
 			<el-table-column label="类型名称" prop="name" width="385" show-overflow-tooltip></el-table-column>
-			<el-table-column label="属性标签" align="center" prop="value">
+			<el-table-column label="属性标签" align="center" prop="default">
 				<template slot-scope="scope">
-					{{ scope.row.dialogTableData | formatVal }}
+					{{ scope.row.value_list | formatVal }}
 				</template>
 			</el-table-column>
 			<el-table-column prop="order" align="center" label="属性排序" show-overflow-tooltip></el-table-column>
@@ -37,7 +37,7 @@
 				<template slot-scope="scope">
 					<el-button-group>
 						<el-button type="primary" plain size="mini" @click="openRulesDialog(scope)">修改</el-button>
-						<el-button type="danger" plain size="mini" @click="deleteItem(scope.$index)">删除</el-button>
+						<el-button type="danger" plain size="mini" @click="deleteSku('single', scope.row.id)">删除</el-button>
 					</el-button-group>
 				</template>
 			</el-table-column>
@@ -53,11 +53,11 @@
 				<el-pagination
 					@size-change="handleSizeChange"
 					@current-change="handleCurrentChange"
-					:current-page="currentPage"
-					:page-sizes="[100, 200, 300, 400]"
-					:page-size="100"
+					:current-page="page.currentPage"
+					:page-sizes="page.pageSizes"
+					:page-size="page.pageSize"
 					layout="total, sizes, prev, pager, next, jumper"
-					:total="400"
+					:total="page.total"
 				></el-pagination>
 			</div>
 		</div>
@@ -65,7 +65,7 @@
 		<el-dialog title="添加类型" :visible.sync="createModel" :modal="false" width="70%">
 			<el-form ref="form" :model="form" label-width="80px" :rules="rules">
 				<el-form-item label="类型名称" prop="name"><el-input v-model="form.name" size="mini" placeholder="类型名称" style="width: 150px;"></el-input></el-form-item>
-				<el-form-item label="排序"><el-input-number v-model="form.order" @change="handleChange" size="mini" :min="1" :max="50"></el-input-number></el-form-item>
+				<el-form-item label="排序"><el-input-number v-model="form.order" size="mini" :min="1" :max="50"></el-input-number></el-form-item>
 				<el-form-item label="状态">
 					<el-radio-group v-model="form.status">
 						<el-radio :label="0" border size="mini">启用</el-radio>
@@ -74,18 +74,19 @@
 				</el-form-item>
 				<el-form-item label="关联规格">
 					<div class="flex">
-						<span class="form-item-span flex border mt-2 rounded justify-center align-center" style="line-height: initial; width: 70px; height: 30px;">
-							<font>颜色</font>
+						<span class="form-item-span flex border mt-2 rounded justify-center align-center" style="line-height: initial; width: 100px; height: 30px;" v-for="(item,index) in form.sku_list" :key="index" @click="deleteItem(index)">
+							<font class="text-truncate">{{item.name}}</font>
 							<i class="el-icon-delete"></i>
 						</span>
 						<span
 							class="form-item-span flex border mt-2 rounded justify-center align-center el-icon-plus"
 							style="line-height: initial; width: 70px; height: 30px;"
+							@click="openDialog"
 						></span>
 					</div>
 				</el-form-item>
-				<el-form-item label="属性列表" prop="value">
-					<el-table :data="dialogTableData" style="width: 100%">
+				<el-form-item label="属性列表" prop="default">
+					<el-table :data="value_list" style="width: 100%">
 						<el-table-column prop="order" label="排序" width="80">
 							<template slot-scope="scope">
 								<el-input v-model="scope.row.order" type="number" size="mini"></el-input>
@@ -107,13 +108,13 @@
 						</el-table-column>
 						<el-table-column width="50" label="是否显示">
 							<template slot-scope="scope">
-								<el-switch v-model="scope.row.isShow" :active-value="true" :inactive-value="false" @change="switchChange"></el-switch>
+								<el-switch v-model="scope.row.isShow" :active-value="true" :inactive-value="false"></el-switch>
 							</template>
 						</el-table-column>
-						<el-table-column prop="value" width="250" label="属性值">
-							<template slot-scope="scope" v-if="scope.row.type !== 'input'">
-								<el-input v-model="scope.row.value" type="textarea" v-if="!scope.row.isEdit"></el-input>
-								<span v-else>{{ scope.row.value | toN }}</span>
+						<el-table-column width="250" label="属性值">
+							<template slot-scope="scope" v-if="scope.row.type !== 'input'&&scope.row.isShow">
+								<el-input v-model="scope.row.default" type="textarea" placeholder="一行为一个属性值，多个属性值用换行输入" v-if="!scope.row.isEdit"></el-input>
+								<span v-else>{{ scope.row.default}}</span>
 							</template>
 						</el-table-column>
 						<el-table-column label="操作" width="150">
@@ -136,7 +137,10 @@
 
 <script>
 import searchBox from '@/components/searchBox/searchBox.vue';
+import mixin from '@/common/mixins'
 export default {
+	inject:['layout','app'],
+	mixins:[mixin],
 	data() {
 		return {
 			isShow: false,
@@ -144,97 +148,65 @@ export default {
 				name: '',
 				order: 0,
 				status: 0,
-				type: 0
+				type: 0,
+				sku_list:[]
 			},
-			dialogTableData: [
-				{
-					id: 0,
-					name: '特性',
-					value: '棕色,黄色',
-					order: 50,
-					status: 0,
-					type: 'input',
-					isShow: false,
-					isEdit: true
-				},
-				{
-					id: 1,
-					name: '前置摄像机',
-					value: '棕色',
-					order: 50,
-					status: 0,
-					type: 'input',
-					isShow: false,
-					isEdit: true
-				}
+			value_list: [
 			],
 			tableData: [
-				{
-					id: 0,
-					name: '颜色',
-					order: 50,
-					status: 0,
-					type: 0,
-					sku_list: [{ id: 1, name: '颜色' }, { id: 2, name: '尺寸' }],
-					dialogTableData: [
-						{
-							order: 50,
-							name: '特性',
-							type: 'input',
-							value: ''
-						},
-						{
-							order: 50,
-							name: '前置摄像机',
-							type: 'input',
-							value: ''
-						}
-					]
-				}
 			],
-			multipleSelection: [],
-			currentPage: 0,
 			createModel: false,
 			rules: {
 				name: [{ required: true, message: '规格名称不能为空', trigger: 'blur' }],
 			},
-			currentIndex: -1
+			currentIndex: -1,
+			dynamicUrl:'goods_type'
 		};
 	},
-	created() {},
-	filters: {
-		formatVal(val) {
-			console.log(val)
-			let arr = val.map(i => i.name);
-			return arr.join(',');
-		},
-		toN(val) {
-			return val && val.replace(/\n/g, '，')||val
-		}
-	},
 	methods: {
+		getMixinList(e) {
+			this.tableData=e.list.map(v=>{
+				v.sku_list=v.skus
+				v.value_list=v.goods_type_values
+				v.value_list=v.value_list.map(i=>{
+					i.isEdit=true
+					i.isShow=true
+					return i
+				})
+				return v
+			})
+		},
+		//dialog 添加规格
+		openDialog(){
+			this.app.openSkuDialog(res=>{
+				let index = this.form.sku_list.findIndex(i=>i.id===res.id)
+				if(index !== -1)return this.$message.warning('已经选过了')
+				this.form.sku_list.push(res)
+			})
+		},
+		//dialog删除规格
+		deleteItem(index){
+			this.form.sku_list.splice(index,1)
+		},
+		//dialog完成按钮
 		done(scope) {
 			scope.row.isEdit = !scope.row.isEdit;
 		},
-		submit() {},
 		//添加一个属性
 		addAttr() {
-			this.dialogTableData.push({
+			this.value_list.push({
 				id: 1,
-				name: '颜色',
-				value: '棕色',
+				name: '尺寸',
+				default: '',
 				order: 50,
-				status: 0,
-				type: 'input',
-				isShow: false,
+				status: 1,
+				type: 'radio',
+				isShow: true,
 				isEdit: true
 			});
 		},
 		dialogDeleteItem(scope) {
-			this.dialogTableData.splice(scope.$inedx, 1);
-		},
-		switchChange(e) {
-			console.log(e);
+			this.value_list.splice(scope.$inedx, 1);
 		},
 		//是否禁用
 		isBan(item) {
@@ -246,28 +218,26 @@ export default {
 			//新建
 			if (e == false) {
 				this.form = {
-					name: '',
-					order: 0,
-					status: 0,
-					type: 0,
-					value: '',
-					dialogTableData:[]
+						name: '颜色',
+						order: 50,
+						status: 0,
+						type: 0,
+						// sku_list: [{ id: 1, name: '颜色' }, { id: 2, name: '尺寸' }],
+						sku_list: [],
+						value_list: [
+						]
 				};
-				this.dialogTableData=[]
+				this.value_list=[]
 			} else {
 				//修改页面的 初始值
 				this.form = {
 					...e.row
 				};
-				this.dialogTableData=[...e.row.dialogTableData]
+				this.value_list=[...e.row.value_list]
 				//根据currentindex 判断是 添加表格 | 修改表格
 				this.currentIndex = e.$index;
 			}
 			this.createModel = true;
-		},
-		//关闭规格dialog
-		closeRulesDialog() {
-			this.createModel = false;
 		},
 		//dialog确定
 		ruleFn() {
@@ -276,7 +246,7 @@ export default {
 				let result = true;
 				let messages = [];
 				let str = ''
-				this.dialogTableData.forEach((i,n) => {
+				this.value_list.forEach((i,n) => {
 					let no = n + 1;
 					//属性名称验证
 					if (i.name == '') {
@@ -289,7 +259,7 @@ export default {
 						messages.push(`第${no}排序不能为空`);
 					}
 					//属性值验证
-					if (i.type !== 'input' && i.value == '') {
+					if (i.type !== 'input' && i.default == '') {
 						result = result && false;
 						messages.push(`第${no}行属性值不能为空`);
 					}
@@ -307,65 +277,26 @@ export default {
 						message: str
 					});
 				}
-				let msg = '添加';
-				if (this.currentIndex == -1) {
-					//添加表格
-					// this.form.value = this.form.value.replace('\n', '，');
-					this.tableData.unshift({
-						...this.form,
-						dialogTableData:[...this.dialogTableData]
-					});
-				} else {
-					//修改表格
-					//！！！ 一定要让这个 item 引用 this.batleData 的内存地址，否侧不生效
-					let item = this.tableData[this.currentIndex];
-					item.name = this.form.name;
-					item.order = this.form.order;
-					item.status = this.form.status;
-					item.type = this.form.type;
-					item.dialogTableData = this.dialogTableData
-					msg = '修改';
-					this.currentIndex = -1;
-				
+				//添加表格
+				let value_list=this.value_list.map(i=>{
+					if(i.default){
+						i.default=i.default.replace(/\n/g,',')
+					}
+					return i
+				})
+				let id = 0
+				if (this.currentIndex !== -1) {
+					//修改
+					id = this.tableData[this.currentIndex].id
 				}
-				this.closeRulesDialog();
-				this.$message.success(msg + '成功');
+				let data = {
+					...this.form,
+					skus_id:this.sku_ids,
+					value_list:[...value_list]
+				} 
+				this.addOrEdit(data,id)
 			});
 		},
-		//批量删除
-		deleteAll() {
-			this.$confirm('此操作将永久删除该文件, 是否继续?', '提示', {
-				confirmButtonText: '确定',
-				cancelButtonText: '取消',
-				type: 'warning'
-			}).then(() => {
-				let index;
-				this.multipleSelection.forEach(i => {
-					index = this.tableData.findIndex(v => v.id == i.id);
-					if (index !== -1) this.tableData.splice(index, 1);
-				});
-				this.$message.success('删除成功!');
-			});
-		},
-		handleClick() {
-			console.log(this.activeName);
-		},
-		superSearch(boolean) {
-			this.isShow = boolean;
-		},
-		// 当选择项发生变化时会触发该事件
-		handleSelectionChange(val) {
-			this.multipleSelection = val;
-		},
-		//删除一项列表
-		deleteItem(index) {
-			this.tableData.splice(index, 1);
-		},
-		//当前项改变时触发
-		handleCurrentChange() {},
-		//size 发生变化时触发
-		handleSizeChange() {},
-		handleChange() {}
 	},
 	components: {
 		searchBox
@@ -376,6 +307,15 @@ export default {
 				if (tag) return scope.row.isEdit ? '编辑属性值' : '完成';
 				return scope.row.type !== 'input' ? true : false;
 			};
+		},
+		sku_ids(){
+			return this.form.sku_list.map(i=>i.id)
+		}
+	},
+	filters: {
+		formatVal(val) {
+			let arr = val ? val.map(v=>v.name):[]
+			return arr.join(',')
 		}
 	}
 };

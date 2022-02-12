@@ -342,7 +342,6 @@
 			onSubmit() {},
 			//级联选择器当选中节点变化时触发
 			handleChange(value) {
-				console.log(value);
 			}
 		},
 		computed:{

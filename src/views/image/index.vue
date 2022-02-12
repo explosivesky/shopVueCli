@@ -6,14 +6,14 @@
 				<div class="flex align-center" style="height: 100%;">
 					<div class="flex align-center" style="margin-right: auto;">
 						<el-select v-model="searchForm.order" placeholder="请选择排序方式" size="small" class="mr-2" style="width: 200px;">
-							<el-option v-for="item in options" :key="item.value" :value="item.value"></el-option>
+							<el-option v-for="item in options" :key="item.value" :value="item.value" :label="item.label"></el-option>
 						</el-select>
-						<el-input v-model="searchForm.val" placeholder="请输入相册名称" size="small" class="mr-2" style="width: 200px;"></el-input>
-						<el-button type="success" size="small" class="mr-2">搜索</el-button>
+						<el-input v-model="searchForm.keyword" placeholder="请输入图片名称" size="small" class="mr-2" style="width: 200px;"></el-input>
+						<el-button type="success" size="small" class="mr-2" @click="searchFn">搜索</el-button>
 					</div>
 					<div class="flex align-center">
 						<el-button type="danger" size="small" @click.stop.native="openMsgBox('', 'deleteAll')" v-show="chooseList.length">批量删除</el-button>
-						<el-button :type="chooseList.length ? 'warning' : 'danger'" size="small" @click.stop.native="cancelChoose">{{btn}}</el-button>
+						<el-button :type="chooseList.length ? 'warning' : 'danger'" size="small" @click.stop.native="cancelChoose">{{ btn }}</el-button>
 						<el-button type="success" size="small" @click.stop.native="openDialog(false)">创建相册</el-button>
 						<el-button type="warning" size="small" @click.stop.native="openUpload">上传图片</el-button>
 					</div>
@@ -24,29 +24,19 @@
 				<el-aside width="200px" style="position: absolute; top: 60px; left: 0; bottom: 60px;">
 					<!-- 相册列表组 -->
 					<ul class="list-group">
-						<picture-info-list
-							v-for="(c, c_i) in picture"
-							:key="c.name"
-							:item="c"
-							:index="c_i"
-							:currentIndex="currentIndex"
-							@openDialog="openDialog"
-							@openMsgBox="openMsgBox"
-							@light="light"
-						/>
+						<picture-info-list v-for="(c, c_i) in picture" :key="c.id" :item="c" :id="id" @openDialog="openDialog" @openMsgBox="openMsgBox" @light="light" />
 					</ul>
 				</el-aside>
 				<el-container>
 					<!-- main -->
 					<el-main class="" style="position: absolute; top: 60px; left: 200px; right: 0; bottom: 0;">
-						<el-row :gutter="10">
-							<el-col :span="24" :lg="4" :md="6" :sm="8" :xs="24" v-for="(s, s_i) in srcList" :key="s_i">
+						<el-row :gutter="10" v-if="srcList.length != 0">
+							<el-col :span="24" :lg="4" :md="6" :sm="8" :xs="24" v-for="(s, s_i) in srcList" :key="s.id">
 								<img-list :srcList="s" :index="s_i" @openPrompt="openPrompt" @deleteImg="deleteImg" @checkStyle="checkStyle" />
 							</el-col>
 						</el-row>
-						<div style="height: 40px;">
-							
-						</div>
+						<div class="flex justify-center" v-else><h5>暂无图片</h5></div>
+						<div style="height: 40px;"></div>
 					</el-main>
 				</el-container>
 			</el-container>
@@ -55,20 +45,23 @@
 				<div class="flex align-center">
 					<div class="border-right flex align-center justify-center" style="width: 200px; height: 60px;">
 						<el-button-group>
-							<el-button  class="mr-2" size="mini">上一页</el-button>
-							<el-button  size="mini">下一页</el-button>
-						</el-button-group>	
+							<el-button class="mr-2" size="mini" :disabled="currentPicturePage === 1" @click="currentPicturePageFn('pre')">上一页</el-button>
+							<el-button size="mini" :disabled="currentPicturePage === Math.ceil(currentPicturePageTotal / 10) ? true : false" @click="currentPicturePageFn('next')">
+								下一页
+							</el-button>
+							<!-- 条目总数 / 每页条数 如果和 当前分页相等 就 disabled  要向上取整-->
+						</el-button-group>
 					</div>
 					<div class="pl-2">
 						<el-pagination
-						      @size-change="handleSizeChange"
-						      @current-change="handleCurrentChange"
-						      :current-page="currentPage"
-						      :page-sizes="[100, 200, 300, 400]"
-						      :page-size="100"
-						      layout="total, sizes, prev, pager, next, jumper"
-						      :total="400">
-						    </el-pagination>
+							@size-change="handleSizeChange"
+							@current-change="handleCurrentChange"
+							:current-page="currentPage"
+							:page-sizes="pageSizes"
+							:page-size.sync="pageSize"
+							layout="total, sizes, prev, pager, next, jumper"
+							:total="pageTotal"
+						></el-pagination>
 					</div>
 				</div>
 			</el-footer>
@@ -78,15 +71,24 @@
 			:editAndCreate="editAndCreate"
 			:dialogVisible.sync="dialogVisible"
 			type="dialog"
-			:num.sync="dialogForm.num"
-			:input.sync="dialogForm.input"
+			:order.sync="dialogForm.order"
+			:name.sync="dialogForm.name"
 			@editModel="editModel"
 			@handleChange="handleChange"
 		/>
 		<!-- 上传 upload -->
 		<el-dialog :show-close="true" @before-close="closeDialog" title="上传图片" :visible.sync="uploadVisible" width="40%" :modal="false" top="30vh">
 			<div style="text-align: center;">
-				<el-upload class="upload-demo" :drag="true" :action="action" multiple>
+				<el-upload
+					class="upload-demo"
+					:drag="true"
+					:headers="{ token: $store.state.user.token }"
+					action="/admin/image/upload"
+					multiple
+					:on-success="uploadSuccess"
+					:data="{ image_class_id: imageListId }"
+					name="img"
+				>
 					<i class="el-icon-upload"></i>
 					<div class="el-upload__text">
 						将文件拖到此处，或
@@ -109,21 +111,22 @@ export default {
 			dialogVisible: false,
 			uploadVisible: false,
 			currentPage: 1,
-			action: '',
 			searchForm: {
-				val: '',
+				keyword: '',
 				order: ''
 			},
 			dialogForm: {
-				input: '',
-				num: 0
+				name: '',
+				order: 0
 			},
 			options: [
 				{
-					value: '顺序排序'
+					value: 'asc',
+					label: '升序排序'
 				},
 				{
-					value: '倒序排序'
+					value: 'desc',
+					label: '降序排序'
 				}
 			],
 			handle: [
@@ -134,68 +137,164 @@ export default {
 					value: '删除'
 				}
 			],
-			picture: [],
-			currentIndex: 0,
-			pictureIndex: -1,
-			srcList: [],
-			chooseList: [],
+			picture: [], //侧边栏数据
+			currentPicturePage: 1, //侧边栏当前分页
+			currentPicturePageTotal: 0,
+			id: 0, //图片列表当前id
+			pictureIndex: -1, //控制  修改 | 创建相册
+			srcList: [], //图片数据
+			chooseList: [], //选中的图片数据
+			pageSize: 10, //每页多少条
+			pageSizes: [10, 20, 30, 50, 100], //快速跳转到多少条
+			pageTotal: 0 //图片列表总条目数
 		};
 	},
+	inject: ['layout'],
 	methods: {
-		      handleSizeChange(val) {
-		        console.log(`每页 ${val} 条`);
-		      },
-		      handleCurrentChange(val) {
-		        console.log(`当前页: ${val}`);
-		      },
-		//列表高亮
-		light(index) {
-			this.currentIndex = index;
+		//上传文件
+		uploadSuccess() {
+			this.__init();
 		},
-		//删除相册列表 || 删除图片
-		deleteModel(index, type) {
-			if (type == 'deleteImg') {
-				this.srcList.splice(index, 1);
-			} else if (type == 'delateItemList') {
-				this.picture.splice(index, 1);
-				//重新获取高亮
-				this.light(index);
+		__init(id) {
+			this.layout.isLoading(true);
+			//获取相册列表
+			new this.request(this.url.m(this.currentPicturePage).imageclass)
+				.modeget()
+				.then(res => {
+					this.picture = res.data.data.list; //相册数据
+					this.id = id || this.picture[0].id; //因为图片列表id高亮 是 根据 id 判断的，所以刷新时给刷新前的 id
+					this.currentPicturePageTotal = res.data.data.totalCount; //相册分页总数
+					this.getImg(); //获取对应相册下的图片列表
+				})
+				.catch(e => {
+					this.layout.isLoading(false);
+				});
+		},
+		//获取对应相册下的图片列表
+		getImg() {
+			this.layout.isLoading(true);
+			new this.request(this.getImageListUrl)
+				.modeget()
+				.then(res => {
+					this.layout.isLoading(false);
+					this.pageTotal = res.data.data.totalCount; //分页总数
+					this.srcList = res.data.data.list.map(i => {
+						return {
+							id: i.id,
+							src: i.url,
+							name: i.name,
+							checkTag: 0,
+							isCheck: false,
+							checkState: -1
+						};
+					});
+				})
+				.catch(e => {
+					this.layout.isLoading(false);
+				});
+		},
+		//相册列表分页
+		currentPicturePageFn(val) {
+			//上一页
+			if (val == 'pre') {
+				this.currentPicturePage--;
+			} else {
+				//下一页
+				this.currentPicturePage++;
 			}
+			this.__init();
+		},
+		//搜索按钮
+		searchFn() {
+			this.getImg(); //获取对应相册下的图片列表
+		},
+		//pageSize 改变时会触发
+		handleSizeChange(val) {
+			this.pageSize = val;
+			this.getImg();
+		},
+		//currentPage 改变时会触发
+		handleCurrentChange(val) {
+			this.currentPage = val;
+			this.getImg();
+		},
+		//列表高亮
+		light(id) {
+			if (this.id == id) return;
+			this.id = id;
+			this.currentPage = 1; //默认显示该相册的第一页数据
+			if (this.chooseList.length !== 0) this.cancelChoose(); //取消全部选中
+			this.getImg();
 		},
 		//确认删除消息框
-		openMsgBox(index, type, obj = null) {
+		openMsgBox(id, type, obj = null) {
 			this.$confirm('此操作将永久删除该文件, 是否继续?', '提示', {
 				confirmButtonText: '确定',
 				cancelButtonText: '取消',
 				type: 'warning'
 			}).then(() => {
+				//删除单张
 				if (type == 'deleteImg') {
 					//删除图片
 					//删除图片后更新选中样式
-					if (this.chooseList.length) this.checkStyle(obj);
-					this.deleteModel(index, type);
+					if (this.chooseList.length !== 0) this.checkStyle(obj);
+					new this.request(this.url.m(obj.id).image)
+						.modedelete()
+						.then(res => {
+							this.__init(this.id);
+							this.layout.isLoading(false);
+						})
+						.catch(e => {
+							this.layout.isLoading(false);
+						});
+					//删除相册
 				} else if (type == 'delateItemList') {
-					//删除列表
-					this.deleteModel(index, type);
+					new this.request(this.url.m(id).imageclass)
+						.modedelete()
+						.then(res => {
+							this.__init(this.id);
+							this.layout.isLoading(false);
+						})
+						.catch(e => {
+							this.layout.isLoading(false);
+						});
+					//批量删除
 				} else if (type == 'deleteAll') {
 					//批量删除
-					let arr = this.srcList.filter(i => !i.isCheck);
-					this.srcList = arr;
+					//过滤出选中的
+					let arr = this.srcList.filter(i => i.isCheck);
+					let ids = arr.map(i => {
+						return i.id;
+					});
 					this.chooseList = [];
+					new this.request(this.url.m().delete_all, { ids })
+						.modepost()
+						.then(res => {
+							this.__init();
+							this.layout.isLoading(false);
+						})
+						.catch(e => {
+							this.layout.isLoading(false);
+						});
 				}
-				this.$message({
-					type: 'success',
-					message: '删除成功!'
-				});
+				this.layout.isLoading(false);
+				this.$message.success('删除成功');
 			});
 		},
+		//删除图片
+		deleteImg(obj) {
+			this.openMsgBox('', 'deleteImg', obj);
+		},
 		//打开对话框
-		openDialog(item, index) {
-			this.dialogVisible = true;
+		openDialog(item, id) {
+			this.id = id;
 			//修改相册
 			if (item) {
-				return (this.dialogForm.input = item.name), (this.dialogForm.num = item.num), (this.pictureIndex = index), (this.picture[index].modelIndex = index);
+				//初始化 dialog
+				(this.dialogForm.name = item.name), (this.dialogForm.order = item.order), (this.pictureIndex = id);
 			}
+			if (item === false) this.pictureIndex = -1;
+			this.dialogVisible = true; //打开dialog
 		},
 		//打开upload
 		openUpload() {
@@ -209,45 +308,65 @@ export default {
 		editModel() {
 			if (this.pictureIndex > -1) {
 				//修改相册数据
-				this.picture[this.pictureIndex].name = this.dialogForm.input;
-				this.picture[this.pictureIndex].num = this.dialogForm.num;
+				this.layout.isLoading(true);
+				new this.request(this.url.m(this.id).imageclass, this.dialogForm)
+					.modepost()
+					.then(res => {
+						this.__init();
+						this.$message.success('修改成功');
+						this.layout.isLoading(false);
+					})
+					.catch(e => {
+						this.layout.isLoading(false);
+					});
 			} else {
 				//创建相册
-				this.picture.unshift({
-					name: this.dialogForm.input,
-					num: this.dialogForm.num
-				});
+				this.layout.isLoading(true);
+				new this.request(this.url.m().imageclass, this.dialogForm)
+					.modepost()
+					.then(res => {
+						this.__init(this.id);
+						this.$message.success('新增成功');
+						this.layout.isLoading(false);
+					})
+					.catch(e => {
+						this.layout.isLoading(false);
+					});
 			}
 
 			//初始化
-			(this.dialogForm.input = ''), (this.dialogForm.num = 0), (this.dialogVisible = false), (this.pictureIndex = -1);
+			(this.dialogForm.name = ''), (this.dialogForm.order = 0), (this.dialogVisible = false), (this.pictureIndex = -1);
 		},
 		//计数器
 		handleChange() {},
-		//打开prompt
+		//修改图片信息
 		openPrompt(id) {
+			//获取当前选中图片的索引
 			let index = this.srcList.findIndex(i => i.id === id);
 			this.$prompt('请输入图片信息', '修改图片信息', {
 				showClose: false,
 				closeOnClickModal: false,
-				inputValue: this.srcList[this.srcList.findIndex(i => i.id === id)].name,
+				inputValue: this.srcList[this.srcList.findIndex(i => i.id === id)].name, //获取当前选中图片的名称
 				confirmButtonText: '确定',
 				cancelButtonText: '取消'
 			}).then(({ value }) => {
-				this.srcList[this.srcList.findIndex(i => i.id === id)].name = value;
-				this.$message({
-					type: 'success',
-					message: '修改成功'
-				});
+				//注意这里 是结构出来的 value 而不是形参
+				new this.request(this.url.m(id).image, { name: value.trim() })
+					.modepost()
+					.then(res => {
+						this.getImg();
+						this.$message.success('修改成功');
+						this.layout.isLoading(false);
+					})
+					.catch(e => {
+						this.layout.isLoading(false);
+					});
+				this.layout.isLoading(false);
 			});
-		},
-		//删除图片
-		deleteImg(index, obj) {
-			this.openMsgBox(index, 'deleteImg', obj);
 		},
 		//选中样式
 		checkStyle(obj) {
-			let { name, id, checkState, isCheck, checkTag ,src} = obj;
+			let { name, id, checkState, isCheck, checkTag, src } = obj;
 			// 根据当前 选中的 item 中的 id 判断 srcList 对应 id 的索引，并根据索引 修改 srcList 中的 isCheck 里更新 子组件的 是否选中样式
 			let index = this.srcList.findIndex(i => i.id === id);
 			//没选中的
@@ -255,7 +374,7 @@ export default {
 				this.srcList[index].isCheck = !isCheck;
 				this.srcList[index].checkState = id;
 				// 把选中的放到 choose 数组中
-				this.chooseList.push({ name, checkState, id ,src});
+				this.chooseList.push({ name, checkState, id, src });
 				//tag 就是 数组的长度
 				this.srcList[index].checkTag = this.chooseList.length;
 				return;
@@ -279,35 +398,46 @@ export default {
 		//取消选中
 		cancelChoose() {
 			//取消选中
-			if(this.chooseList.length){
+			if (this.chooseList.length !== 0) {
 				this.srcList.forEach(i => {
 					if (i.isCheck) {
 						i.isCheck = false;
 						i.checkTag = 0;
-						i.checkState=-1
+						i.checkState = -1;
 					}
 				});
 				this.chooseList = [];
-			}else{
+			} else {
 				//全部选中
 				this.srcList.forEach(i => {
 					if (!i.isCheck) {
-						this.chooseList.push({ name:i.name, checkState:i.checkState, id:i.id });
+						this.chooseList.push({ name: i.name, checkState: i.checkState, id: i.id });
 						i.isCheck = true;
 						i.checkTag = this.chooseList.length;
-						i.checkState=i.id
+						i.checkState = i.id;
 					}
 				});
 			}
-
 		}
 	},
 	computed: {
 		editAndCreate() {
 			return this.pictureIndex > -1 ? '修改相册' : '创建相册';
 		},
-		btn(){
-			return this.chooseList.length ?  '取消选中':'全部选中'
+		btn() {
+			return this.chooseList.length ? '取消选中' : '全部选中';
+		},
+		//动态获取选中相册的 id
+		imageListId() {
+			let item = this.picture.find(i => i.id == this.id);
+			if (item) return item.id;
+			return 1;
+		},
+		//请求图片的动态路径
+		getImageListUrl() {
+			let other = '';
+			if (this.searchForm.keyword != '') other = `&keyword=${this.searchForm.keyword}`;
+			return `/admin/imageclass/${this.imageListId}/image/${this.currentPage}?limit=${this.pageSize}&order=${this.searchForm.order}${other}`;
 		}
 	},
 	components: {
@@ -316,27 +446,9 @@ export default {
 		dialogBox
 	},
 	created() {
-		for (let i = 0; i < 30; i++) {
-			this.picture.push({
-				// id: i,
-				name: '相册 ' + i,
-				modelIndex: -1,
-				num: Math.floor(Math.random(0, 1) * 100)
-			});
-		}
-		for (let i = 0; i < 40; i++) {
-			this.srcList.push({
-				id: i,
-				src: 'https://fuss10.elemecdn.com/8/27/f01c15bb73e1ef3793e64e6b7bbccjpeg.jpeg',
-				name: '图片' + i,
-				checkTag: 0,
-				isCheck: false,
-				checkState: -1
-			});
-		}
+		this.__init();
 	}
 };
 </script>
 
-<style scoped="scoped">
-</style>
+<style scoped="scoped"></style>

@@ -10,7 +10,7 @@ import $utils from '@/common/utils.js'
 export default {
 	namespace: 'goods',
 	state: {
-		rulesType: 0, //商品规格 0多规格 ： 1单规格 
+		skus_type: 0, //商品规格 0多规格 ： 1单规格 
 		//基础设置
 		name: '', //商品名称
 		cate: '', //商品分类
@@ -37,50 +37,49 @@ export default {
 			src:'https://fuss10.elemecdn.com/8/27/f01c15bb73e1ef3793e64e6b7bbccjpeg.jpeg'
 		}],
 		//sku
-		skuList: [{
-				name: '颜色', //规格项
-				group: 0,
-				type: 'default', // default 无 ： color 颜色 ： img 图片
-				list: [{
-						name: '红色',
-						image: '',
-						color: '',
-						isShow: false,
-						default: 'default0'
-					},
-					{
-						name: '黄色',
-						image: '',
-						color: '',
-						isShow: false,
-						default: 'default1'
-					}
-				]
+		skuList: [
+			// {
+			// 	name: '颜色', //规格项
+			// 	group: 0,
+			// 	type: 'default', // default 无 ： color 颜色 ： img 图片
+			// 	list: [{
+			// 			name: '红色',
+			// 			image: '',
+			// 			color: '',
+			// 			isShow: false,
+			// 			default: 'default0'
+			// 		},
+			// 		{
+			// 			name: '黄色',
+			// 			image: '',
+			// 			color: '',
+			// 			isShow: false,
+			// 			default: 'default1'
+			// 		}]
+			// },
+			// {
+			// 	name: '尺寸', //规格项
+			// 	group: 1,
+			// 	type: 'default', // default 无 ： color 颜色 ： img 图片
+			// 	list: [{
+			// 			name: 'XL',
+			// 			image: '',
+			// 			color: '',
+			// 			isShow: false,
+			// 			default: 'default2'
+			// 		},
+			// 		{
+			// 			name: 'XXL',
+			// 			image: '',
+			// 			color: '',
+			// 			isShow: false,
+			// 			default: 'default3'
+			// 		}
+			// 	]
 
-			},
-			{
-				name: '尺寸', //规格项
-				group: 1,
-				type: 'default', // default 无 ： color 颜色 ： img 图片
-				list: [{
-						name: 'XL',
-						image: '',
-						color: '',
-						isShow: false,
-						default: 'default2'
-					},
-					{
-						name: 'XXL',
-						image: '',
-						color: '',
-						isShow: false,
-						default: 'default3'
-					}
-				]
-
-			}
+			// }
 		],
-		'default': 4, //ref
+		'default': 0, //ref
 		group: 2,
 		// 表头
 		ths: [{
@@ -192,33 +191,11 @@ export default {
 			key,
 			val
 		}) {
-			console.log(key,
-			val)
 			state[key] = val
 		},
 		//增加规格卡片
-		skuAdd(state) {
-			state.skuList.push({
-				name: '颜色', //规格项
-				group: state.group++,
-				type: 'default', // default 无 ： color 颜色 ： img 图片
-				list: [{
-						name: '红色',
-						image: '',
-						color: '',
-						isShow: false,
-						default: 'default0'
-					},
-					{
-						name: '黄色',
-						image: '',
-						color: '',
-						isShow: false,
-						default: 'default1'
-					}
-				]
-
-			})
+		skuAdd(state,sku) {
+			state.skuList.push(sku)
 		},
 		//删除规格卡片
 		skuDelete(state, index) {
@@ -230,9 +207,6 @@ export default {
 			val,
 			index
 		}) {
-			console.log(	key,
-			val,
-			index)
 			state.skuList[index][key] = val
 		},
 		//排序规格卡片
@@ -245,17 +219,11 @@ export default {
 		},
 		//添加规格项
 		addRuleItem(state, {
-			type,
+			data,
 			index
 		}) {
-			state.skuList[index].list.push({
-				name: '规格名称',
-				color: '',
-				img: '',
-				isShow: false,
-				default: 'default' + state.default++
-			})
-		},
+			state.skuList[index].list.push(data)
+			},
 		//控制每个 规格项 显示
 		editIsShow(state, {
 			index,

@@ -33,18 +33,18 @@
 					{{ getUpCondition.name + ' : ' + scope.row[getUpCondition.value] }}
 				</template>
 			</el-table-column>
-			<el-table-column align="center" label="折扣率(%)" prop="discont"></el-table-column>
+			<el-table-column align="center" label="折扣率(%)" prop="discount"></el-table-column>
 			<el-table-column align="center" label="等级序号" width="120" prop="level"></el-table-column>
-			<el-table-column align="center" label="状态" prop="discont">
+			<el-table-column align="center" label="状态" prop="discount">
 				<template slot-scope="scope">
-					<el-switch v-model="scope.row.status"></el-switch>
+						<el-button :type="scope.row.status ? 'warning' : 'success'" size="mini" @click="isBan(scope.row)">{{ scope.row.status ? '禁用' : '启用' }}</el-button>
 				</template>
 			</el-table-column>
 			<el-table-column align="center" label="操作">
 				<template slot-scope="scope">
 					<el-button-group>
 						<el-button type="text" class="text-primary mr-2" @click="openDialog(scope)">修改</el-button>
-						<el-button type="text" class="text-primary">删除</el-button>
+						<el-button type="text" class="text-primary" @click="deleteItem(scope)">删除</el-button>
 					</el-button-group>
 				</template>
 			</el-table-column>
@@ -60,11 +60,11 @@
 				<el-pagination
 					@size-change="handleSizeChange"
 					@current-change="handleCurrentChange"
-					:current-page="currentPage"
-					:page-sizes="[100, 200, 300, 400]"
-					:page-size="100"
+					:current-page="page.currentPage"
+					:page-sizes="page.pageSizes"
+					:page-size="page.pageSize"
 					layout="total, sizes, prev, pager, next, jumper"
-					:total="400"
+					:total="page.total"
 				></el-pagination>
 			</div>
 		</div>
@@ -93,7 +93,7 @@
 				<el-form-item label="升级条件">
 					<div>
 						<small class="mr-2">累计消费满</small>
-						<el-input type="number" v-model="form.consume" placeholder="累计消费" size="mini" style="width: 25%;">
+						<el-input type="number" v-model="form.max_price" placeholder="累计消费" size="mini" style="width: 25%;">
 							<template slot="append">元</template>
 						</el-input>
 						<small class="text-secondary d-block">
@@ -102,7 +102,7 @@
 					</div>
 					<div>
 						<small class="mr-2">累计次数满</small>
-						<el-input type="number" v-model="form.times" placeholder="累计次数" size="mini" style="width: 25%;">
+						<el-input type="number" v-model="form.max_times" placeholder="累计次数" size="mini" style="width: 25%;">
 							<template slot="append">次</template>
 						</el-input>
 						<small class="text-secondary d-block">
@@ -111,7 +111,7 @@
 					</div>
 				</el-form-item>
 				<el-form-item label="折扣率(%)">
-					<el-input size='mini' type="number" v-model="form.discont" placeholder="折扣率" style="width: 25%;">
+					<el-input size='mini' type="number" v-model="form.discount" placeholder="折扣率" style="width: 25%;">
 						<template slot="append">%</template>
 					</el-input>
 					<small class="text-secondary d-block">
@@ -129,72 +129,41 @@
 
 <script>
 import searchBox from '@/components/searchBox/searchBox.vue';
+import mixin from '@/common/mixins'
 export default {
+	inject: ['app','layout'],
+	mixins:[mixin],
 	data() {
 		return {
 			level: 0,
 			tableData: [
-				{
-					name: '普通会员',
-					consume: 100,
-					times: 10,
-					discont: 10,
-					level: 1,
-					status: true, //启用
-					create_time: ''
-				}
 			],
 			form: {
 				name: '',
-				consume: 0,
-				times: 0,
-				discont: 0,
+				max_price: 0,
+				max_times: 0,
+				discount: 0,
 				level: 0,
 				status: 1 //启用
 			},
 			editIndex: -1,
-			currentPage: 0,
-			createModel: false
+			createModel: false,
+			dynamicUrl:'user_level'
 		};
 	},
 	created() {},
-	inject: ['app'],
 	methods: {
-		//图像选择dialog
-		openImgDialog() {
-			this.app.openImgDialog(res => {
-				this.form.avatar = res.src;
-			});
+		getMixinList(data) {
+			this.tableData =data.list
 		},
 		//确定
 		ensure() {
-			let msg = '';
-			//创建
-			if (this.editIndex == -1) {
-				this.tableData.unshift({
-					name: this.form.name,
-					consume: this.form.consume,
-					times: this.form.times,
-					discont: this.form.discont,
-					level: this.form.level,
-					status: this.form.status, //启用
-					create_time: ''
-				});
-				msg = '添加';
-			} else {
-				//修改
-				let item = this.tableData[this.editIndex];
-				item.name = this.form.name;
-				item.consume = this.form.consume;
-				item.times = this.form.times;
-				item.discont = this.form.discont
-				item.level = this.form.level;
-				item.status = this.form.status;
-				item.create_time = this.form.create_time;
-				this.editIndex = -1;
-				msg = '修改';
+			//修改
+			let id = 0 
+			if (this.editIndex !== -1) {
+				id = this.tableData[this.editIndex].id
 			}
-			this.$message.success(msg + '成功');
+			this.addOrEdit(this.form,id)
 			this.createModel = false;
 		},
 		//打开 dialog
@@ -203,20 +172,21 @@ export default {
 			if (e == false) {
 				this.form = {
 					name: '',
-					consume: 0,
-					times: 0,
-					discont: 0,
+					max_price: 0,
+					max_times: 0,
+					discount: 0,
 					level: 0,
 					status: true,
 					create_time: '',
 				};
+				this.editIndex = -1;
 			} else {
 				//修改
 				this.form = {
 					name: e.row.name,
-					consume: e.row.consume,
-					times: e.row.times,
-					discont: e.row.discont,
+					max_price: e.row.max_price,
+					max_times: e.row.max_times,
+					discount: e.row.discount,
 					level: e.row.level,
 					status: e.row.status,
 					create_time: e.row.create_time
@@ -225,14 +195,9 @@ export default {
 			}
 			this.createModel = true;
 		},
-		//删除表单图片
-		deleteImg() {
-			this.form.avatar = '';
-		},
-		//当前项改变时触发
-		handleCurrentChange() {},
-		//size 发生变化时触发
-		handleSizeChange() {}
+		deleteItem(scope){
+			this.deleteSku('single', scope.row.id)
+		}
 	},
 	computed: {
 		//升级条件
@@ -240,11 +205,11 @@ export default {
 			let arr = [
 				{
 					name: '累计消费',
-					value: 'consume'
+					value: 'max_price'
 				},
 				{
 					name: '消费次数',
-					value: 'times'
+					value: 'max_times'
 				}
 			];
 			return arr[this.level];
